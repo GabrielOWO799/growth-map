@@ -10,6 +10,7 @@ import {useCallback} from 'react';
 import SkeletonCard from './components/SkeletonCard';
 import './App.css';
 
+
 function App() {
   // 使用自定义Hook管理成就数据
 
@@ -20,7 +21,8 @@ function App() {
   const [showImportExport, setShowImportExport] = useState(false);
   
   // 获取统计信息
-  const statistics = getStatistics();
+  const { getStatistics } = useAchievements(); // ✅ 从 Hook 中解构
+  const statistics = getStatistics(); // ✅ 现在可以调用
 
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
