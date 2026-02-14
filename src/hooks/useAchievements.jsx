@@ -1,4 +1,5 @@
 // src/hooks/useAchievements.js
+console.log('useAchievements module loaded');
 import { useState, useEffect, useCallback } from 'react';
 import { loadAchievements, saveAchievements, getStorageInfo } from '../utils/storage';
 /**

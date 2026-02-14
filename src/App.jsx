@@ -7,7 +7,6 @@ import { TAGS } from './constants/tags';
 import useAchievements from './hooks/useAchievements';
 import SkeletonCard from './components/SkeletonCard';
 import './App.css';
-import { useEffect } from 'react';
 
 function App() {
   // 从自定义 Hook 获取所有数据和方法
@@ -29,7 +28,7 @@ function App() {
   const [showStatistics, setShowStatistics] = useState(false);
   const [showImportExport, setShowImportExport] = useState(false);
 
-  // 获取统计信息（现在 getStatistics 已经可用）
+  // 获取统计信息
   const statistics = getStatistics();
 
   // 添加示例数据
