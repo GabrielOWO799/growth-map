@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # 数据库URL：SQLite文件存储在项目根目录
-SQLALCHEMY_DATABASE_URL = "sqlite:///./growth.db"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./growth.db")
 
 # 创建数据库引擎
 engine = create_engine(

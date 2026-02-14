@@ -31,5 +31,3 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 print(f"API_KEY from env: {API_KEY}")
 
-# API_KEY = os.getenv("API_KEY", "your-secret-key-here")
-API_KEY = "test123"   # 临时硬编码

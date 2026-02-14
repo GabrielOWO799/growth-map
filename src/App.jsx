@@ -12,19 +12,6 @@ import './App.css';
 
 function App() {
   // 使用自定义Hook管理成就数据
-  const {
-    achievements,
-    isLoading,
-    storageInfo,
-    addAchievement,
-    deleteAchievement,
-    updateAchievement,
-    clearAllAchievements,
-    getStatistics,
-    exportData,
-    importData,
-    reload
-  } = useAchievements();
 
   // 本地状态：是否显示统计面板
   const [showStatistics, setShowStatistics] = useState(false);
@@ -35,9 +22,29 @@ function App() {
   // 获取统计信息
   const statistics = getStatistics();
 
+  const [achievements, setAchievements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+useEffect(() => {
+  fetchAchievements()
+    .then(res => setAchievements(res.data))
+    .catch(err => setError(err.message))
+    .finally(() => setLoading(false));
+}, []);
+
+const handleUpload = async (newAchievement) => {
+  try {
+    const res = await createAchievement(newAchievement);
+    setAchievements(prev => [...prev, res.data]);
+  } catch (err) {
+    setError(err.message);
+  }
+};
+  
   // 添加示例数据的函数
   const addExampleAchievement = () => {
-    const exampleAchievements = [
+    const exampleAchievements = [ 
       {
         title: '学习自定义Hook',
         description: '成功创建了第一个自定义Hook，理解了逻辑复用的重要性',

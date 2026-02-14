@@ -21,6 +21,7 @@ origins = [
     "http://localhost:5173",      # Vite 默认开发服务器
     "http://127.0.0.1:5173",
     "https://growth-map.vercel.app",  # 已部署的前端
+    "https://growth-map-production.up.railway.app" #线上部署
     # 如果需要，可以添加更多
 ]
 

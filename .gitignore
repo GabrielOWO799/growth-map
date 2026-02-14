@@ -16,6 +16,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+
 # IDE
 .vscode/
 .idea/
@@ -25,3 +26,9 @@ yarn-error.log*
 # 操作系统
 .DS_Store
 Thumbs.db
+
+# Python后端
+backend/*.db
+backend/.env
+backend/__pycache__/
+backend/venv/
