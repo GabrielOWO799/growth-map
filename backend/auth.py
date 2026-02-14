@@ -13,7 +13,7 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 
 
-async def verify_api_key(api_key: str = Security(api_key_header)):
+async def verify_api_key(api_key: str = 安全(api_key_header)):
     print("=== verify_api_key 被调用 ===")
     print(f"Received api_key: {api_key}")
     print(f"Expected API_KEY: {API_KEY}")
@@ -31,5 +31,3 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 print(f"API_KEY from env: {API_KEY}")
 
-# API_KEY = os.getenv("API_KEY", "your-secret-key-here")
-API_KEY = "test123"   # 临时硬编码
