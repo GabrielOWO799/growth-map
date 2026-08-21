@@ -3,30 +3,45 @@ import Card from './components/Card';
 import AddAchievementForm from './components/AddAchievementForm';
 import StatisticsPanel from './components/StatisticsPanel';
 import ImportExportPanel from './components/ImportExportPanel';
+import AuthForm from './components/AuthForm';
 import { TAGS } from './constants/tags';
 import useAchievements from './hooks/useAchievements';
-import SkeletonCard from './components/SkeletonCard';
+import { useAuth } from './auth/AuthContext';
 import './App.css';
 
+// 同步状态文案
+const SYNC_LABEL = {
+  idle: '未登录',
+  syncing: '同步中…',
+  synced: '已同步',
+  error: '同步失败',
+};
+
 function App() {
-  // 从自定义 Hook 获取所有数据和方法
   const {
     achievements,
     isLoading,
-    storageInfo,
+    syncState, // 替代旧的 storageInfo
     reload,
     addAchievement,
     deleteAchievement,
     updateAchievement,
+    updateProgress,
     clearAllAchievements,
     exportData,
     importData,
-    getStatistics
+    getStatistics,
   } = useAchievements();
 
-  // 本地 UI 状态
+  // 登录态：未登录直接展示登录/注册页
+  const { isAuthenticated, username, logout } = useAuth();
   const [showStatistics, setShowStatistics] = useState(false);
   const [showImportExport, setShowImportExport] = useState(false);
+
+  // 未登录：只渲染认证页
+  if (!isAuthenticated) {
+    return <AuthForm />;
+  }
 
   // 获取统计信息
   const statistics = getStatistics();
@@ -38,22 +53,22 @@ function App() {
         title: '学习自定义Hook',
         description: '成功创建了第一个自定义Hook，理解了逻辑复用的重要性',
         imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=250&fit=crop',
-        tag: '学习'
+        tag: '学习',
       },
       {
         title: '代码重构完成',
         description: '将项目重构为模块化结构，提高了代码可维护性',
         imageUrl: 'https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=400&h=250&fit=crop',
-        tag: '工作'
+        tag: '工作',
       },
       {
         title: '冥想15分钟',
         description: '坚持每日冥想，感觉更加专注和平静',
         imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=250&fit=crop',
-        tag: '生活'
-      }
+        tag: '生活',
+      },
     ];
-    exampleAchievements.forEach(achievement => {
+    exampleAchievements.forEach((achievement) => {
       addAchievement(achievement);
     });
   };
@@ -67,13 +82,13 @@ function App() {
             <p className="subtitle">记录你的每一份努力，见证成长的每一步</p>
           </div>
           <div className="header-actions">
-            <button 
+            <button
               onClick={() => setShowStatistics(!showStatistics)}
               className="header-button"
             >
               📊 {showStatistics ? '隐藏统计' : '显示统计'}
             </button>
-            <button 
+            <button
               onClick={() => setShowImportExport(!showImportExport)}
               className="header-button"
             >
@@ -82,28 +97,23 @@ function App() {
           </div>
         </div>
 
-        {/* 存储信息条 */}
+        {/* 账号 / 同步状态条（替代旧的本地存储信息条） */}
         <div className="storage-info">
           <div className="storage-item">
-            <span className="storage-label">📊 总数:</span>
-            <span className="storage-value">{statistics.total}</span>
-          </div>
-          <div className="storage-item">
-            <span className="storage-label">💾 存储:</span>
-            <span className="storage-value">
-              {storageInfo.size ? `${Math.round(storageInfo.size / 1024 * 100) / 100} KB` : '无数据'}
-            </span>
+            <span className="storage-label">👤 账号:</span>
+            <span className="storage-value">{username}</span>
           </div>
           <div className="storage-item">
             <span className="storage-label">🔄 状态:</span>
-            <span className="storage-value">{storageInfo.hasData ? '已保存' : '未保存'}</span>
+            <span className="storage-value">{SYNC_LABEL[syncState] || syncState}</span>
           </div>
           <button onClick={reload} className="refresh-button" title="重新加载数据">🔄</button>
+          <button onClick={logout} className="refresh-button" title="退出登录">🚪</button>
         </div>
 
         {/* 统计面板 */}
         {showStatistics && (
-          <StatisticsPanel 
+          <StatisticsPanel
             statistics={statistics}
             tags={TAGS}
             onClose={() => setShowStatistics(false)}
@@ -117,6 +127,7 @@ function App() {
             onExport={exportData}
             onImport={importData}
             onClear={clearAllAchievements}
+            onLogout={logout}
             achievementsCount={achievements.length}
           />
         )}
@@ -124,7 +135,7 @@ function App() {
 
       <main className="app-main">
         <aside className="sidebar">
-          <AddAchievementForm 
+          <AddAchievementForm
             onAddAchievement={addAchievement}
             tags={TAGS}
             disabled={isLoading}
@@ -168,12 +179,13 @@ function App() {
             </div>
           ) : (
             <div className="achievements-grid">
-              {achievements.map(achievement => (
-                <Card 
+              {achievements.map((achievement) => (
+                <Card
                   key={achievement.id}
                   achievement={achievement}
                   onDelete={deleteAchievement}
                   onUpdate={updateAchievement}
+                  onUpdateProgress={updateProgress}
                 />
               ))}
             </div>
@@ -182,7 +194,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>成长图谱 · 使用自定义Hook管理数据 · 数据自动保存到本地</p>
+        <p>成长图谱 · 数据已接入后端，登录后实时同步</p>
       </footer>
     </div>
   );

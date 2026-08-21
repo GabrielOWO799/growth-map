@@ -153,3 +153,30 @@ def test_stats_overall():
     assert "total_achievements" in data
     assert "completed_achievements" in data
     assert "overall_progress" in data
+
+def test_create_achievement_with_due_date():
+    response = client.post("/achievements", json={
+        "title": "测试截止日期",
+        "target_value": 5,
+        "category": "测试",
+        "due_date": "2025-12-31"
+    }, headers=headers)  # 如果有认证头
+    assert response.status_code == 200
+    data = response.json()
+    assert data["due_date"] == "2025-12-31"
+
+def test_update_achievement_due_date():
+    # 先创建
+    resp = client.post("/achievements", json={
+        "title": "待更新截止日期",
+        "target_value": 3,
+        "category": "测试"
+    }, headers=headers)
+    aid = resp.json()["id"]
+    
+    # 更新 due_date
+    resp = client.put(f"/achievements/{aid}", json={
+        "due_date": "2025-12-31"
+    }, headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["due_date"] == "2025-12-31"

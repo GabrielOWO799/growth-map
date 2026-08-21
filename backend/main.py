@@ -8,8 +8,15 @@ from sqlalchemy import func
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from auth import verify_api_key
 from fastapi import Depends
+
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm  # 新增
+from sqlalchemy.orm import Session
+from datetime import timedelta
+import models, schemas, auth  # 导入 auth 模块
+from database import SessionLocal, engine
+
 
 # 创建数据库表（如果不存在）
 models.Base.metadata.create_all(bind=engine)
@@ -55,9 +62,10 @@ def root():
 def create_achievement(
     achievement: schemas.AchievementCreate, 
     db: Session = Depends(get_db),
+    current_user:models.User =Depends(auth.get_current_user)
 ):
     """创建新成就"""
-    db_achievement = models.Achievement(**achievement.dict())
+    db_achievement = models.Achievement(**achievement.dict(),user_id=current_user.id)
     db.add(db_achievement)
     db.commit()
     db.refresh(db_achievement)
@@ -70,22 +78,18 @@ def create_achievement(
          description="支持分页和按分类过滤",
          tags=["成就管理"])
 def read_achievements(
-    skip: int = 0, 
+    skip: int = 0,
     limit: int = 100,
     category: str = None,
     db: Session = Depends(get_db),
-    api_key: str = Depends(verify_api_key)   # 添加这一行
+    current_user: models.User = Depends(auth.get_current_user),
 ):
-    print(f"接收到的 category: {category}")  # 调试输出
-    
-    query = db.query(models.Achievement)
+    # 只返回当前登录用户自己的成就（用户隔离，避免串号）
+    query = db.query(models.Achievement).filter(models.Achievement.user_id == current_user.id)
+
     if category:
-        print(f"正在过滤 category = {category}")
         query = query.filter(models.Achievement.category == category)
-    
-    # 打印最终生成的 SQL 语句（但不会显示参数值）
-    print(query)
-    
+
     achievements = query.offset(skip).limit(limit).all()
     return achievements
 
@@ -93,11 +97,14 @@ def read_achievements(
 def update_achievement(
     achievement_id: int,
     achievement: schemas.AchievementUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     """更新成就（全量/部分）"""
+    # 只能修改自己名下的成就
     db_achievement = db.query(models.Achievement).filter(
-        models.Achievement.id == achievement_id
+        models.Achievement.id == achievement_id,
+        models.Achievement.user_id == current_user.id
     ).first()
     if db_achievement is None:
         raise HTTPException(status_code=404, detail="成就不存在")
@@ -114,11 +121,13 @@ def update_achievement(
 @app.delete("/achievements/{achievement_id}")
 def delete_achievement(
     achievement_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user:models.User=Depends(auth.get_current_user)
 ):
     """删除成就"""
     db_achievement = db.query(models.Achievement).filter(
-        models.Achievement.id == achievement_id
+        models.Achievement.id == achievement_id,
+        models.Achievement.user_id == current_user.id
     ).first()
     if db_achievement is None:
         raise HTTPException(status_code=404, detail="成就不存在")
@@ -128,7 +137,8 @@ def delete_achievement(
     return {"message": "删除成功"}
 
 @app.get("/achievements/stats/by_category")
-def get_category_stats(db: Session = Depends(get_db)):
+def get_category_stats(db: Session = Depends(get_db),
+                       current_user:models.User=Depends(auth.get_current_user)):
     """统计每个类别的成就数量、平均进度等"""
     stats = db.query(
         models.Achievement.category,
@@ -146,7 +156,9 @@ def get_category_stats(db: Session = Depends(get_db)):
     ]
 
 @app.get("/achievements/stats/overall", tags=["统计"])
-def get_overall_stats(db: Session = Depends(get_db)):
+def get_overall_stats(db: Session = Depends(get_db),
+                      current_user:models.User=Depends(auth.get_current_user)
+                      ):
     """总体统计：总数、已完成数、总进度等"""
     total = db.query(models.Achievement).count()
     completed = db.query(models.Achievement).filter(
@@ -163,6 +175,7 @@ def get_overall_stats(db: Session = Depends(get_db)):
         "completed_achievements": completed,
         "overall_progress": overall_progress
     }
+
 # 自定义全局异常处理器
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
@@ -187,3 +200,30 @@ async def generic_exception_handler(request: Request, exc: Exception):
         }
     )
 
+# ---------- 认证路由 ----------
+@app.post("/register", response_model=schemas.UserOut)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # 检查用户名是否已被占用
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="用户名已被注册")
+    
+    # 创建新用户（密码加密）
+    hashed_password = auth.get_password_hash(user.password)
+    db_user = models.User(username=user.username, hashed_password=hashed_password)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/login", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = auth.authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码错误",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = auth.create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}

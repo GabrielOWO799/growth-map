@@ -1,32 +1,33 @@
 // src/components/Card.jsx
-import { getTagColor, getTagEmoji } from '../constants/tags';
+import { getTagColor, getTagEmoji, TAGS } from '../constants/tags';
 import {useState,memo}from 'react';
 import LazyImage from './LazyImage';
 
 
-const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
-  const { id, title, description, imageUrl, tag, date, createdAt } = achievement;
+const Card=memo(function Card({ achievement, onDelete, onUpdate, onUpdateProgress }) {
+  const { id, title, description, imageUrl, tag, date, createdAt, currentValue } = achievement;
   
   const [showDetails, setShowDetails] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     title,
     description,
-    tag
+    tag,
+    currentValue: currentValue || 0
   });
 
   const tagColor = getTagColor(tag);
   const tagEmoji = getTagEmoji(tag);
 
-  const handleSave = () => {
-    if (onUpdate) {
-      onUpdate(id, editData);
-    }
+  const handleSave = async () => {
+    if (onUpdate) await onUpdate(id, editData);
+    // 进度通过独立接口更新，职责单一、语义清晰
+    if (onUpdateProgress) await onUpdateProgress(id, editData.currentValue);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditData({ title, description, tag });
+    setEditData({ title, description, tag, currentValue: currentValue || 0 });
     setIsEditing(false);
   };
 
@@ -115,19 +116,29 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
               placeholder="详细描述"
               rows={3}
             />
+
+            {/* 进度输入：对应后端 current_value */}
+            <input
+              type="number"
+              min="0"
+              value={editData.currentValue}
+              onChange={(e) => setEditData({ ...editData, currentValue: Number(e.target.value) || 0 })}
+              className="edit-input"
+              placeholder="当前进度（0 起）"
+            />
             
             <div className="edit-tags">
-              {['学习', '健身', '工作', '生活', '创作', '社交'].map((tagOption) => (
+              {TAGS.map((tagOption) => (
                 <button
-                  key={tagOption}
-                  onClick={() => setEditData({ ...editData, tag: tagOption })}
-                  className={`tag-option ${editData.tag === tagOption ? 'selected' : ''}`}
+                  key={tagOption.name}
+                  onClick={() => setEditData({ ...editData, tag: tagOption.name })}
+                  className={`tag-option ${editData.tag === tagOption.name ? 'selected' : ''}`}
                   style={{
-                    backgroundColor: editData.tag === tagOption ? `${getTagColor(tagOption)}20` : '#f0f0f0',
-                    color: editData.tag === tagOption ? getTagColor(tagOption) : '#666'
+                    backgroundColor: editData.tag === tagOption.name ? `${getTagColor(tagOption.name)}20` : '#f0f0f0',
+                    color: editData.tag === tagOption.name ? getTagColor(tagOption.name) : '#666'
                   }}
                 >
-                  {getTagEmoji(tagOption)} {tagOption}
+                  {getTagEmoji(tagOption.name)} {tagOption.name}
                 </button>
               ))}
             </div>
@@ -154,6 +165,12 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
                 #{id.toString().padStart(3, '0')}
               </span>
             </div>
+
+            {typeof currentValue === 'number' && (
+              <div className="card-progress" title="当前进度">
+                📈 进度 {currentValue}
+              </div>
+            )}
             
             {showDetails && description && (
               <div className="card-description">

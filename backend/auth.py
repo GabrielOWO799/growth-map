@@ -1,33 +1,66 @@
-from fastapi import Security, HTTPException, status
-from fastapi.security import APIKeyHeader
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi import HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from database import get_db
+from models import User
 import os
-print("Current working directory:", os.getcwd())
-from dotenv import load_dotenv
 
-load_dotenv()
+# 1. 密码加密上下文
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
-API_KEY = os.getenv("API_KEY", "your-secret-key-here")  # 从环境变量读取
-API_KEY_NAME = "X-API-Key"
+# 2. JWT 配置（从环境变量读取，如果没设置则使用默认值，生产环境务必修改）
+SECRET_KEY = os.getenv("SECRET_KEY", "your-very-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+# 3. OAuth2 密码流（用于 Swagger 自动文档登录）
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
+# ----- 工具函数 -----
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
-async def verify_api_key(api_key: str = 安全(api_key_header)):
-    print("=== verify_api_key 被调用 ===")
-    print(f"Received api_key: {api_key}")
-    print(f"Expected API_KEY: {API_KEY}")
-    if not api_key:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="缺少API Key"
-        )
-    if api_key != API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="无效的API Key"
-        )
-    return api_key
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
 
-print(f"API_KEY from env: {API_KEY}")
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+# ----- 依赖项：获取当前登录用户 -----
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="认证凭证无效或已过期",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise credentials_exception
+    return user
 

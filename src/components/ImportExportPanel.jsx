@@ -1,7 +1,7 @@
 // src/components/ImportExportPanel.jsx
 import { useState } from 'react';
 
-function ImportExportPanel({ onClose, onExport, onImport, onClear, achievementsCount }) {
+function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, achievementsCount }) {
   const [importData, setImportData] = useState('');
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -166,13 +166,11 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, achievementsC
             
             <button 
               onClick={() => {
-                localStorage.clear();
-                alert('已清空所有本地存储数据，页面将刷新');
-                window.location.reload();
+                if (window.confirm('确定要退出登录吗？')) onLogout?.();
               }}
               className="action-button warning"
             >
-              🔥 清除所有本地存储
+              🚪 退出登录
             </button>
           </div>
           
@@ -182,15 +180,15 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, achievementsC
         </div>
 
         {/* 备份信息 */}
-        <div className="backup-info">
-          <h4>💾 备份信息</h4>
-          <ul>
-            <li>数据自动保存到浏览器本地存储</li>
-            <li>建议定期导出备份</li>
-            <li>更换浏览器或设备时需要手动迁移数据</li>
-            <li>隐私模式下数据可能不会被保存</li>
-          </ul>
-        </div>
+          <div className="backup-info">
+            <h4>💾 备份信息</h4>
+            <ul>
+              <li>数据保存在后端服务器，登录后自动同步</li>
+              <li>建议定期导出 JSON 备份</li>
+              <li>更换设备或浏览器时，用同一账号登录即可恢复</li>
+              <li>导出文件可用于迁移或归档</li>
+            </ul>
+          </div>
       </div>
     </div>
   );

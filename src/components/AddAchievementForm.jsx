@@ -36,7 +36,7 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
   };
   
   // 处理表单提交
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault(); // 阻止表单默认提交行为
     
     if (disabled) {
@@ -50,26 +50,24 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
       return;
     }
     
-    // 设置上传状态
+    // 设置上传状态（仅在实际请求期间，不再用 setTimeout 假延迟）
     setIsUploading(true);
-    
-    // 创建新的成就对象
-    const newAchievement = {
-      id: Date.now(), // 使用时间戳作为临时ID
-      title: formData.title,
-      description: formData.description,
-      imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop&auto=format',
-      tag: formData.tag,
-      date: new Date().toISOString().split('T')[0] // YYYY-MM-DD格式
-    };
-    
-    // 模拟上传延迟（实际项目中这里可能是API调用）
-    setTimeout(() => {
-      // 调用父组件传递的回调函数
+
+    try {
+      // 创建新的成就对象（id/imageUrl/date 仅用于本地预览，真正入库由后端生成）
+      const newAchievement = {
+        title: formData.title,
+        description: formData.description,
+        imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop&auto=format',
+        tag: formData.tag,
+        date: new Date().toISOString().split('T')[0] // YYYY-MM-DD格式
+      };
+
+      // 调用父组件传递的回调（已接通后端 API，真正发起请求）
       if (onAddAchievement) {
-        onAddAchievement(newAchievement);
+        await onAddAchievement(newAchievement);
       }
-      
+
       // 重置表单
       setFormData({
         title: '',
@@ -77,12 +75,14 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
         imageUrl: '',
         tag: '学习'
       });
-      
-      // 重置上传状态
-      setIsUploading(false);
-      
+
       alert('成就添加成功！');
-    }, 800);
+    } catch (err) {
+      // 捕获后端/网络错误，避免静默失败
+      alert('保存失败：' + (err && err.message ? err.message : '未知错误'));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (

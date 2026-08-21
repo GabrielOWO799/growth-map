@@ -1,259 +1,188 @@
-// src/hooks/useAchievements.js
-console.log('useAchievements module loaded');
+// src/hooks/useAchievements.jsx
+// 成就数据层（Step 2：改为 API 单一数据源）
+//
+// 改动要点（对照旧版 localStorage 实现）：
+//   1. 数据全部来自后端 /achievements，不再读写 localStorage —— 彻底消除“双数据层割裂”
+//   2. 登录态由 useAuth() 驱动：登录后自动拉取，登出后清空
+//   3. 前端字段(tag/imageUrl/date) 与后端字段(category/target_value/...) 在此做映射
+//
+// ⚠️ 已知 schema 说明：
+//   - 后端暂无 image_url 列，imageUrl 暂用默认图占位（后端补列后回填）
+//   - target_value/current_value/due_date 后端已支持；current_value 现已在前端编辑弹窗收集
+
 import { useState, useEffect, useCallback } from 'react';
-import { loadAchievements, saveAchievements, getStorageInfo } from '../utils/storage';
-/**
- * 自定义Hook：管理成就数据
- * @returns {Object} 成就数据和操作函数
- */
+import * as api from '../api';
+import { useAuth } from '../auth/AuthContext';
+
+const DEFAULT_IMAGE =
+  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop&auto=format';
+
+// 后端 -> 前端
+function toFrontend(db) {
+  return {
+    id: db.id,
+    title: db.title,
+    description: db.description ?? '',
+    tag: db.category ?? '学习',
+    imageUrl: DEFAULT_IMAGE, // 后端暂无 image_url 列，暂用默认图占位
+    date: db.created_at,
+    createdAt: db.created_at,
+    // 进度/目标模型（后端已有，前端在编辑弹窗里直接接 currentValue）
+    targetValue: db.target_value,
+    currentValue: db.current_value,
+    dueDate: db.due_date,
+  };
+}
+
+// 前端 -> 后端（新增/整体更新用）
+function toBackend(fe) {
+  return {
+    title: fe.title,
+    description: fe.description ?? null,
+    category: fe.tag, // 前端 tag 映射到后端 category
+    target_value: 1,
+    current_value: 0,
+    due_date: null,
+  };
+}
+
 function useAchievements() {
-  // 状态：成就列表
+  const { isAuthenticated } = useAuth();
   const [achievements, setAchievements] = useState([]);
-  
-  // 状态：加载状态
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // 状态：存储信息
-  const [storageInfo, setStorageInfo] = useState({
-    hasData: false,
-    count: 0,
-    size: 0
-  });
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  // syncState: idle | syncing | synced | error（替代旧的 storageInfo）
+  const [syncState, setSyncState] = useState('idle');
 
-
-  /**
-   * 加载成就数据
-   */
+  // 拉取列表
   const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setSyncState('syncing');
     try {
-      setIsLoading(true);
-      console.log('开始加载成就数据...');
-      
-      // 模拟网络延迟
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const savedAchievements = loadAchievements();
-      
-      if (savedAchievements && savedAchievements.length > 0) {
-        // 使用保存的数据
-        setAchievements(savedAchievements);
-        console.log(`从本地存储加载了 ${savedAchievements.length} 个成就`);
-      } else {
-        // 使用初始示例数据
-        const initialData = getInitialAchievements();
-        setAchievements(initialData);
-        saveAchievements(initialData);
-        console.log('使用初始数据');
-      }
-      
-      // 更新存储信息
-      setStorageInfo(getStorageInfo());
-      
-    } catch (error) {
-      console.error('加载数据失败:', error);
-      // 出错时使用空数组
-      setAchievements([]);
+      const list = await api.fetchAchievements();
+      setAchievements((list || []).map(toFrontend));
+      setSyncState('synced');
+    } catch (e) {
+      setError(e.message);
+      setSyncState('error');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  /**
-   * 添加成就
-   * @param {Object} newAchievement 新成就数据
-   */
-  const addAchievement = useCallback((newAchievement) => {
-    // 生成新ID（现有最大ID + 1）
-    const newId = achievements.length > 0 
-      ? Math.max(...achievements.map(a => a.id)) + 1 
-      : 1;
-    
-    const achievementWithId = {
-      ...newAchievement,
-      id: newId,
-      createdAt: new Date().toISOString()
-    };
-    
-    // 更新状态
-    const updatedAchievements = [achievementWithId, ...achievements];
-    setAchievements(updatedAchievements);
-    
-    console.log('添加新成就，ID:', newId);
-    return newId;
-  }, [achievements]);
+  // 登录态变化：登录后拉取，登出后清空
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData();
+    } else {
+      setAchievements([]);
+      setSyncState('idle');
+    }
+  }, [isAuthenticated, loadData]);
 
-  /**
-   * 删除成就
-   * @param {number} id 成就ID
-   */
-  const deleteAchievement = useCallback((id) => {
-    const updatedAchievements = achievements.filter(a => a.id !== id);
-    setAchievements(updatedAchievements);
-    
-    console.log('删除成就，ID:', id);
-    return true;
-  }, [achievements]);
+  // 新增
+  const addAchievement = useCallback(async (fe) => {
+    const created = await api.createAchievement(toBackend(fe));
+    const mapped = toFrontend(created);
+    setAchievements((prev) => [mapped, ...prev]);
+    return mapped.id;
+  }, []);
 
-  /**
-   * 更新成就
-   * @param {number} id 成就ID
-   * @param {Object} updates 更新数据
-   */
-  const updateAchievement = useCallback((id, updates) => {
-    const updatedAchievements = achievements.map(achievement => 
-      achievement.id === id 
-        ? { ...achievement, ...updates, updatedAt: new Date().toISOString() }
-        : achievement
-    );
-    
-    setAchievements(updatedAchievements);
-    console.log('更新成就，ID:', id);
-    return true;
-  }, [achievements]);
-
-  /**
-   * 清空所有成就
-   */
-  const clearAllAchievements = useCallback(() => {
-    setAchievements([]);
-    console.log('清空所有成就');
+  // 更新
+  const updateAchievement = useCallback(async (id, edits) => {
+    const updated = await api.updateAchievement(id, toBackend(edits));
+    const mapped = toFrontend(updated);
+    setAchievements((prev) => prev.map((a) => (a.id === id ? mapped : a)));
     return true;
   }, []);
 
-  /**
-   * 获取成就统计信息
-   */
+  // 进度更新（Step 3）：只改 current_value，不碰其他字段
+  // 学习点：后端 PUT 接口是“只更新传入字段”，所以这里直接传给 api.updateProgress 即可。
+  const updateProgress = useCallback(async (id, currentValue) => {
+    const updated = await api.updateProgress(id, currentValue);
+    const mapped = toFrontend(updated);
+    setAchievements((prev) => prev.map((a) => (a.id === id ? mapped : a)));
+    return true;
+  }, []);
+
+  // 删除
+  const deleteAchievement = useCallback(async (id) => {
+    await api.deleteAchievement(id);
+    setAchievements((prev) => prev.filter((a) => a.id !== id));
+    return true;
+  }, []);
+
+  // 清空（逐个删除，因为后端没有“清空全部”接口）
+  const clearAllAchievements = useCallback(async () => {
+    const ids = achievements.map((a) => a.id);
+    await Promise.all(ids.map((id) => api.deleteAchievement(id).catch(() => {})));
+    setAchievements([]);
+    return true;
+  }, [achievements]);
+
+  // 统计（前端本地计算，inputs 仍是 tag/createdAt）
   const getStatistics = useCallback(() => {
     const total = achievements.length;
     const byTag = {};
-    
-    achievements.forEach(achievement => {
-      const tag = achievement.tag;
-      byTag[tag] = (byTag[tag] || 0) + 1;
+    achievements.forEach((a) => {
+      byTag[a.tag] = (byTag[a.tag] || 0) + 1;
     });
-    
-    // 按创建日期分组（最近7天）
     const last7Days = {};
     const now = new Date();
-    
-    achievements.forEach(achievement => {
-      const date = new Date(achievement.createdAt || achievement.date);
+    achievements.forEach((a) => {
+      const date = new Date(a.createdAt || a.date);
       const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-      
-      if (diffDays <= 7) {
-        last7Days[diffDays] = (last7Days[diffDays] || 0) + 1;
-      }
+      if (diffDays <= 7) last7Days[diffDays] = (last7Days[diffDays] || 0) + 1;
     });
-    
-    return {
-      total,
-      byTag,
-      last7Days
-    };
+    return { total, byTag, last7Days };
   }, [achievements]);
 
-  /**
-   * 导出成就数据
-   */
-  const exportData = useCallback(() => {
-    const exportData = {
-      achievements,
-      exportDate: new Date().toISOString(),
-      version: '1.0',
-      count: achievements.length
-    };
-    
-    return JSON.stringify(exportData, null, 2);
-  }, [achievements]);
+  // 导出当前列表为 JSON
+  const exportData = useCallback(
+    () =>
+      JSON.stringify(
+        {
+          achievements,
+          exportDate: new Date().toISOString(),
+          version: '1.0',
+          count: achievements.length,
+        },
+        null,
+        2
+      ),
+    [achievements]
+  );
 
-  /**
-   * 导入成就数据
-   * @param {string} jsonData JSON格式的数据
-   */
-  const importData = useCallback((jsonData) => {
-    try {
-      const data = JSON.parse(jsonData);
-      
-      if (!data.achievements || !Array.isArray(data.achievements)) {
-        throw new Error('数据格式错误：缺少achievements数组');
-      }
-      
-      // 验证每个成就的基本结构
-      const validAchievements = data.achievements.filter(item => 
-        item && typeof item === 'object' && item.title
-      );
-      
-      setAchievements(validAchievements);
-      console.log(`导入 ${validAchievements.length} 个成就`);
-      return validAchievements.length;
-    } catch (error) {
-      console.error('导入数据失败:', error);
-      throw error;
+  // 从 JSON 导入（逐条创建）
+  const importData = useCallback(async (jsonData) => {
+    const data = JSON.parse(jsonData);
+    if (!data.achievements || !Array.isArray(data.achievements)) {
+      throw new Error('数据格式错误：缺少 achievements 数组');
     }
+    const valid = data.achievements.filter((i) => i && typeof i === 'object' && i.title);
+    for (const item of valid) {
+      const created = await api.createAchievement(toBackend(item));
+      setAchievements((prev) => [toFrontend(created), ...prev]);
+    }
+    return valid.length;
   }, []);
 
-  // 加载数据（组件挂载时）
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // 自动保存（成就列表变化时）
-  useEffect(() => {
-    if (achievements.length > 0 && !isLoading) {
-      console.log('自动保存成就数据...');
-      saveAchievements(achievements);
-      setStorageInfo(getStorageInfo());
-    }
-  }, [achievements, isLoading]);
-
-  // 返回数据和操作函数
   return {
-    // 状态
     achievements,
     isLoading,
-    storageInfo,
-    
-    // 操作函数
+    error,
+    syncState,
     addAchievement,
     deleteAchievement,
     updateAchievement,
+    updateProgress,
     clearAllAchievements,
-    
-    // 工具函数
     getStatistics,
     exportData,
     importData,
-    
-    // 重新加载
-    reload: loadData
+    reload: loadData,
   };
-}
-
-/**
- * 获取初始成就数据
- */
-function getInitialAchievements() {
-  return [
-    {
-      id: 1,
-      title: '学习React组件',
-      description: '理解了组件和props的基本概念',
-      imageUrl: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=250&fit=crop',
-      tag: '学习',
-      date: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 2,
-      title: '完成5公里跑步',
-      description: '坚持跑步5公里，配速6:30',
-      imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=250&fit=crop',
-      tag: '健身',
-      date: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
-    }
-  ];
 }
 
 export default useAchievements;
