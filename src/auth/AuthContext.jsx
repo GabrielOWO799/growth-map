@@ -11,6 +11,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as api from '../api';
+import { IS_DEMO_MODE } from '../config';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'gm_token';
@@ -33,11 +34,16 @@ function decodeSub(token) {
 }
 
 export function AuthProvider({ children }) {
-  // 初始状态直接读 localStorage，避免已登录用户看到登录页闪一下
-  const [token, setTokenState] = useState(() => localStorage.getItem(TOKEN_KEY));
-  const [username, setUsername] = useState(() => decodeSub(localStorage.getItem(TOKEN_KEY)));
+  // 演示模式：跳过真实登录，直接以"演示用户"身份进入，login/register/logout 全部变空操作
+  const [token, setTokenState] = useState(() =>
+    IS_DEMO_MODE ? 'demo' : localStorage.getItem(TOKEN_KEY)
+  );
+  const [username, setUsername] = useState(() =>
+    IS_DEMO_MODE ? '演示模式' : decodeSub(localStorage.getItem(TOKEN_KEY))
+  );
 
   const setSession = useCallback((t) => {
+    if (IS_DEMO_MODE) return;
     if (t) {
       localStorage.setItem(TOKEN_KEY, t);
       setTokenState(t);
@@ -91,6 +97,8 @@ export function AuthProvider({ children }) {
 }
 
 // 业务组件统一通过 useAuth() 取登录态
+// （Context 文件按惯例同时导出 Provider 和 hook，豁免 fast-refresh 的单组件导出限制）
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth 必须在 <AuthProvider> 内部使用');

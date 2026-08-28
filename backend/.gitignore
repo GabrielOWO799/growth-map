@@ -1,3 +1,5 @@
 .env
 *.db
+*.db.bak*
 __pycache__/
+*.code-workspace

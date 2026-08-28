@@ -1,14 +1,12 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
 
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from models import Base
+from database import engine  # 复用应用同一套数据库配置（.env / 平台环境变量），迁移和应用永远指向同一个库
 
 
 # this is the Alembic Config object, which provides
@@ -59,17 +57,11 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
+    直接使用应用的 engine（见顶部 import），不读 alembic.ini 里的硬编码 URL，
+    保证迁移永远跑在和应用相同的库上。
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
+    with engine.connect() as connection:
         context.configure(
             connection=connection, target_metadata=Base.metadata
         )

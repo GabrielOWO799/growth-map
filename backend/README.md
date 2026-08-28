@@ -39,3 +39,14 @@
   - 按类别统计成就数量和平均进度
   - 总体统计（总数、完成数、总进度）
 - 所有接口通过Swagger测试
+
+## 部署环境变量（Railway / 任意平台）
+
+以下变量在平台的环境变量里配置，不要写进代码或提交到 git（本地开发写 `backend/.env`，已被 .gitignore 忽略）：
+
+| 变量 | 必填 | 说明 |
+|---|---|---|
+| `SECRET_KEY` | 生产必填 | JWT 签名密钥。生成方式：`python -c "import secrets; print(secrets.token_hex(32))"`。未设置时：DEBUG 模式给临时密钥并警告，非 DEBUG 直接拒绝启动 |
+| `DEEPSEEK_API_KEY` | 推演功能必填 | DeepSeek API 密钥（`sk-` 开头），用于技能树 AI 推演。未配置时推演接口返回 503，其余功能不受影响 |
+| `DATABASE_URL` | 建议 | 生产数据库连接串。Railway 的文件系统不持久，SQLite 会随重新部署丢数据，建议用平台提供的 Postgres |
+| `DEBUG` | 可选 | 本地开发设 `True`；生产保持未设置或 `false` |

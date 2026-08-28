@@ -1,8 +1,12 @@
 import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+# 加载 backend/.env（已存在的环境变量优先，不会覆盖平台注入的配置）
+load_dotenv()
 
 # 数据库URL：SQLite文件存储在项目根目录
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./growth.db")

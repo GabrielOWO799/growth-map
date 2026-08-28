@@ -121,3 +121,9 @@ export async function fetchStatsByCategory() {
 export async function fetchOverallStats() {
   return request('GET', '/achievements/stats/overall');
 }
+
+// ---------- AI 推演（只拿建议，不落库；确认后走正常创建接口） ----------
+// payload: { achievement_id } 散卡推演成候选树 | { root_id } 给已有树推演补全
+export async function inferTree(payload) {
+  return request('POST', '/trees/infer', payload);
+}

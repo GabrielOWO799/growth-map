@@ -4,8 +4,8 @@ import {useState,memo}from 'react';
 import LazyImage from './LazyImage';
 
 
-const Card=memo(function Card({ achievement, onDelete, onUpdate, onUpdateProgress }) {
-  const { id, title, description, imageUrl, tag, date, createdAt, currentValue } = achievement;
+const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
+  const { id, title, description, imageUrl, tag, date, createdAt, currentValue, targetValue } = achievement;
   
   const [showDetails, setShowDetails] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -20,9 +20,16 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate, onUpdateProgres
   const tagEmoji = getTagEmoji(tag);
 
   const handleSave = async () => {
-    if (onUpdate) await onUpdate(id, editData);
-    // 进度通过独立接口更新，职责单一、语义清晰
-    if (onUpdateProgress) await onUpdateProgress(id, editData.currentValue);
+    // 一次请求带上标题/描述/标签/进度：updateAchievement 走局部更新，不会重置其他字段
+    if (onUpdate) {
+      try {
+        await onUpdate(id, editData);
+      } catch (e) {
+        // 后端校验不通过（如进度超目标）或网络错误：留在编辑态提示，避免改动被静默丢弃
+        alert('保存失败：' + (e && e.message ? e.message : '未知错误'));
+        return;
+      }
+    }
     setIsEditing(false);
   };
 
@@ -117,14 +124,20 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate, onUpdateProgres
               rows={3}
             />
 
-            {/* 进度输入：对应后端 current_value */}
+            {/* 进度输入：对应后端 current_value，钳在 [0, 目标值] 区间（后端会拒绝超目标的进度） */}
             <input
               type="number"
               min="0"
+              max={targetValue}
               value={editData.currentValue}
-              onChange={(e) => setEditData({ ...editData, currentValue: Number(e.target.value) || 0 })}
+              onChange={(e) =>
+                setEditData({
+                  ...editData,
+                  currentValue: Math.max(0, Math.min(Number(e.target.value) || 0, targetValue)),
+                })
+              }
               className="edit-input"
-              placeholder="当前进度（0 起）"
+              placeholder={`当前进度（0 - ${targetValue}）`}
             />
             
             <div className="edit-tags">

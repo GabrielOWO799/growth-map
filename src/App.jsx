@@ -3,10 +3,12 @@ import Card from './components/Card';
 import AddAchievementForm from './components/AddAchievementForm';
 import StatisticsPanel from './components/StatisticsPanel';
 import ImportExportPanel from './components/ImportExportPanel';
+import TreePanel from './components/TreePanel';
 import AuthForm from './components/AuthForm';
 import { TAGS } from './constants/tags';
 import useAchievements from './hooks/useAchievements';
 import { useAuth } from './auth/AuthContext';
+import { IS_DEMO_MODE } from './config';
 import './App.css';
 
 // 同步状态文案
@@ -26,7 +28,6 @@ function App() {
     addAchievement,
     deleteAchievement,
     updateAchievement,
-    updateProgress,
     clearAllAchievements,
     exportData,
     importData,
@@ -37,6 +38,8 @@ function App() {
   const { isAuthenticated, username, logout } = useAuth();
   const [showStatistics, setShowStatistics] = useState(false);
   const [showImportExport, setShowImportExport] = useState(false);
+  // 主视图切换：'wall' 成就墙（日常记录）| 'tree' 技能树（森林）
+  const [view, setView] = useState('wall');
 
   // 未登录：只渲染认证页
   if (!isAuthenticated) {
@@ -45,6 +48,9 @@ function App() {
 
   // 获取统计信息
   const statistics = getStatistics();
+
+  // 成就墙只展示普通卡/任务卡；里程碑是树的结构节点，只在技能树视图里出现
+  const wallCards = achievements.filter((a) => a.kind !== 'milestone');
 
   // 添加示例数据
   const addExampleAchievement = () => {
@@ -83,6 +89,12 @@ function App() {
           </div>
           <div className="header-actions">
             <button
+              onClick={() => setView(view === 'wall' ? 'tree' : 'wall')}
+              className="header-button"
+            >
+              {view === 'wall' ? '🌲 技能树' : '🏆 成就墙'}
+            </button>
+            <button
               onClick={() => setShowStatistics(!showStatistics)}
               className="header-button"
             >
@@ -97,18 +109,29 @@ function App() {
           </div>
         </div>
 
-        {/* 账号 / 同步状态条（替代旧的本地存储信息条） */}
+        {/* 账号 / 同步状态条；演示模式下显示模式提示，不显示账号与登出 */}
         <div className="storage-info">
-          <div className="storage-item">
-            <span className="storage-label">👤 账号:</span>
-            <span className="storage-value">{username}</span>
-          </div>
-          <div className="storage-item">
-            <span className="storage-label">🔄 状态:</span>
-            <span className="storage-value">{SYNC_LABEL[syncState] || syncState}</span>
-          </div>
+          {IS_DEMO_MODE ? (
+            <div className="storage-item">
+              <span className="storage-label">🎪 演示模式:</span>
+              <span className="storage-value">数据仅保存在本设备，登录功能暂时关闭</span>
+            </div>
+          ) : (
+            <>
+              <div className="storage-item">
+                <span className="storage-label">👤 账号:</span>
+                <span className="storage-value">{username}</span>
+              </div>
+              <div className="storage-item">
+                <span className="storage-label">🔄 状态:</span>
+                <span className="storage-value">{SYNC_LABEL[syncState] || syncState}</span>
+              </div>
+            </>
+          )}
           <button onClick={reload} className="refresh-button" title="重新加载数据">🔄</button>
-          <button onClick={logout} className="refresh-button" title="退出登录">🚪</button>
+          {!IS_DEMO_MODE && (
+            <button onClick={logout} className="refresh-button" title="退出登录">🚪</button>
+          )}
         </div>
 
         {/* 统计面板 */}
@@ -134,67 +157,83 @@ function App() {
       </header>
 
       <main className="app-main">
-        <aside className="sidebar">
-          <AddAchievementForm
-            onAddAchievement={addAchievement}
-            tags={TAGS}
-            disabled={isLoading}
-          />
-          <div className="control-panel">
-            <h3>⚙️ 控制面板</h3>
-            <div className="control-buttons">
-              <button onClick={addExampleAchievement} className="control-button secondary" disabled={isLoading}>
-                + 添加示例数据
-              </button>
-              <button onClick={() => setShowStatistics(true)} className="control-button secondary">
-                📊 查看统计
-              </button>
-              <button onClick={() => setShowImportExport(true)} className="control-button secondary">
-                🔄 数据管理
-              </button>
-            </div>
-          </div>
-        </aside>
+        {view === 'tree' ? (
+          <section className="achievements-section">
+            <TreePanel
+              achievements={achievements}
+              onAdd={addAchievement}
+              onDelete={deleteAchievement}
+              onLightUp={(id, target) => updateAchievement(id, { currentValue: target })}
+              onMoveCard={(id, parentId) => updateAchievement(id, { parentId })}
+              isLoading={isLoading}
+            />
+          </section>
+        ) : (
+          <>
+            <aside className="sidebar">
+              <AddAchievementForm
+                onAddAchievement={addAchievement}
+                tags={TAGS}
+                disabled={isLoading}
+              />
+              <div className="control-panel">
+                <h3>⚙️ 控制面板</h3>
+                <div className="control-buttons">
+                  <button onClick={addExampleAchievement} className="control-button secondary" disabled={isLoading}>
+                    + 添加示例数据
+                  </button>
+                  <button onClick={() => setShowStatistics(true)} className="control-button secondary">
+                    📊 查看统计
+                  </button>
+                  <button onClick={() => setShowImportExport(true)} className="control-button secondary">
+                    🔄 数据管理
+                  </button>
+                </div>
+              </div>
+            </aside>
 
-        <section className="achievements-section">
-          <div className="section-header">
-            <h2>🏆 我的成就墙</h2>
-            <p className="section-subtitle">
-              共 {achievements.length} 个成就 • 按创建时间排序
-            </p>
-          </div>
+            <section className="achievements-section">
+              <div className="section-header">
+                <h2>🏆 我的成就墙</h2>
+                <p className="section-subtitle">
+                  共 {wallCards.length} 个成就 • 按创建时间排序
+                </p>
+              </div>
 
-          {isLoading ? (
-            <div className="loading-state">
-              <div className="loading-spinner large"></div>
-              <p>正在加载成就数据...</p>
-            </div>
-          ) : achievements.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">📝</div>
-              <h3>还没有任何成就记录</h3>
-              <button onClick={addExampleAchievement} className="example-button">
-                + 添加示例成就
-              </button>
-            </div>
-          ) : (
-            <div className="achievements-grid">
-              {achievements.map((achievement) => (
-                <Card
-                  key={achievement.id}
-                  achievement={achievement}
-                  onDelete={deleteAchievement}
-                  onUpdate={updateAchievement}
-                  onUpdateProgress={updateProgress}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+              {isLoading ? (
+                <div className="loading-state">
+                  <div className="loading-spinner large"></div>
+                  <p>正在加载成就数据...</p>
+                </div>
+              ) : wallCards.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📝</div>
+                  <h3>还没有任何成就记录</h3>
+                  <button onClick={addExampleAchievement} className="example-button">
+                    + 添加示例成就
+                  </button>
+                </div>
+              ) : (
+                <div className="achievements-grid">
+                  {wallCards.map((achievement) => (
+                    <Card
+                      key={achievement.id}
+                      achievement={achievement}
+                      onDelete={deleteAchievement}
+                      onUpdate={updateAchievement}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </main>
 
       <footer className="app-footer">
-        <p>成长图谱 · 数据已接入后端，登录后实时同步</p>
+        <p>
+          成长图谱{IS_DEMO_MODE ? ' · 演示模式（本地数据）' : ' · 数据已接入后端，登录后实时同步'}
+        </p>
       </footer>
     </div>
   );
