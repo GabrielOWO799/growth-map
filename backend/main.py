@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,10 +12,16 @@ import auth
 import ai
 import models
 import schemas
-from database import get_db
+from database import get_db, engine
 
-# 建表/改表统一走 alembic（Procfile 启动时先 alembic upgrade head 再起服务）。
-# 不再用 create_all：它只会建缺失的表、不会加新列，线上老库会和新模型对不上。
+# 常驻部署：建表/改表统一走 alembic（Procfile 启动时先 alembic upgrade head 再起服务）。
+# Serverless（Vercel）：没有构建期迁移环节，冷启动时幂等建表兜底（只补缺失的表，不会改列）；
+# 生产库的结构变更仍用 alembic 从本地执行（DATABASE_URL 指向生产库）。
+if os.getenv("VERCEL"):
+    try:
+        models.Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass  # 并发冷启动建表可能竞态，表已存在即目标状态
 
 app = FastAPI(title="成长图谱API")
 
