@@ -182,23 +182,22 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
                   <span className="tree-root-name">{root.title}</span>
                 </div>
                 <span className="tree-root-count">{litCount}/{children.length}</span>
-                {/* AI 推演依赖后端，演示模式下不显示 */}
-                {!IS_DEMO_MODE && (
-                  <button
-                    className="tree-icon-btn"
-                    title="AI 推演：补充这棵树缺的子卡"
-                    onClick={() =>
-                      setInfer({
-                        mode: 'expand',
-                        rootId: root.id,
-                        rootTitle: root.title,
-                        rootTag: root.tag,
-                      })
-                    }
-                  >
-                    🧭
-                  </button>
-                )}
+                {/* AI 推演依赖后端：演示模式下置灰并说明原因（后端恢复后自动可用） */}
+                <button
+                  className="tree-icon-btn"
+                  title={IS_DEMO_MODE ? 'AI 推演需要后端支持，演示模式下暂不可用' : 'AI 推演：补充这棵树缺的子卡'}
+                  disabled={IS_DEMO_MODE}
+                  onClick={() =>
+                    setInfer({
+                      mode: 'expand',
+                      rootId: root.id,
+                      rootTitle: root.title,
+                      rootTag: root.tag,
+                    })
+                  }
+                >
+                  🧭
+                </button>
                 <button
                   className="tree-icon-btn"
                   title="删除树（需先删除全部子卡）"
@@ -291,22 +290,21 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
             {looseCards.map((c) => (
               <span key={c.id} className="loose-chip" style={{ borderColor: `${getTagColor(c.tag)}66` }}>
                 {getTagEmoji(c.tag)} {c.title}
-                {!IS_DEMO_MODE && (
-                  <button
-                    className="tree-icon-btn"
-                    title="AI 推演：以这张卡为种子长出一棵树"
-                    onClick={() =>
-                      setInfer({
-                        mode: 'seed',
-                        seedId: c.id,
-                        seedTitle: c.title,
-                        seedTag: c.tag,
-                      })
-                    }
-                  >
-                    🧭
-                  </button>
-                )}
+                <button
+                  className="tree-icon-btn"
+                  title={IS_DEMO_MODE ? 'AI 推演需要后端支持，演示模式下暂不可用' : 'AI 推演：以这张卡为种子长出一棵树'}
+                  disabled={IS_DEMO_MODE}
+                  onClick={() =>
+                    setInfer({
+                      mode: 'seed',
+                      seedId: c.id,
+                      seedTitle: c.title,
+                      seedTag: c.tag,
+                    })
+                  }
+                >
+                  🧭
+                </button>
               </span>
             ))}
           </div>

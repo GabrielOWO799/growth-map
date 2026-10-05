@@ -498,3 +498,14 @@
     justify-self: start;
   }
 }
+
+/* 置灰的推演按钮（演示模式下可见但不可用，预告功能存在） */
+.tree-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tree-icon-btn:disabled:hover {
+  color: var(--muted);
+  background: none;
+}
