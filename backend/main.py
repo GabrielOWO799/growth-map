@@ -49,25 +49,6 @@ app.add_middleware(
 def root():
     return {"message": "成长图谱后端已启动"}
 
-# ---------- 临时诊断：检查前端源站的 sw.js / 入口 HTML（定位浏览器 SW 不更新的问题；诊断后删除） ----------
-@app.get("/debug-frontend", tags=["诊断"])
-async def debug_frontend():
-    import httpx
-    out = {}
-    async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
-        for path in ("/", "/sw.js", "/registerSW.js"):
-            try:
-                r = await client.get(f"https://growth-map.vercel.app{path}")
-                out[path] = {
-                    "status": r.status_code,
-                    "content_type": r.headers.get("content-type"),
-                    "cache_control": r.headers.get("cache-control"),
-                    "head": r.text[:400],
-                }
-            except Exception as e:
-                out[path] = {"error": repr(e)}
-    return out
-
 # ---------- 成就CRUD ----------
 @app.post("/achievements", 
           response_model=schemas.Achievement,
