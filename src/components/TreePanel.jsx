@@ -16,8 +16,12 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
   const [newTreeTitle, setNewTreeTitle] = useState('');
   // 每棵树一个"挂卡"草稿：rootId -> {title, target, tag}
   const [drafts, setDrafts] = useState({});
-  // AI 推演上下文（一次只开一个）：{mode:'seed'|'expand', seedId?, seedTitle?, seedTag?, rootId?, rootTitle?, rootTag?}
+  // 推演上下文（一次只开一个）：{mode:'seed'|'expand', seedId?, seedTitle?, seedTag?, rootId?, rootTitle?, rootTag?}
   const [infer, setInfer] = useState(null);
+  // 确认创建进行中（禁用按钮防双击重复创建）
+  const [creating, setCreating] = useState(false);
+  // 部分失败的断点：seed 模式下树根/已建卡数，重试时跳过，避免重复创建
+  const [resume, setResume] = useState(null);
 
   // ---- 森林组装（全部在前端从平铺列表推导，后端不需要树专用接口） ----
   const roots = achievements.filter((a) => a.kind === 'milestone' && !a.parentId);
@@ -82,31 +86,47 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
   };
 
   // 推演确认：seed 模式建树根 -> 把种子卡移进树 -> 逐条建建议卡；expand 模式直接往树上挂
+  // 断点续传：串行创建中途失败时，resume 记住已建的树根和卡数，重试只补剩下的，不会重复创建
   const handleInferConfirm = async ({ milestoneTitle, suggestions }) => {
+    setCreating(true);
+    let rootId = infer.mode === 'expand' ? infer.rootId : resume?.rootId;
+    let done = resume?.done ?? 0; // 已成功创建的建议卡数（按非空行序）
     try {
-      let rootId = infer.rootId;
-      if (infer.mode === 'seed') {
+      if (infer.mode === 'seed' && !rootId) {
+        // 里程碑是整棵树的汇聚大目标，难度按约定定为 A
         const treeId = await onAdd({
           title: milestoneTitle,
           tag: infer.seedTag || '学习',
           kind: 'milestone',
+          difficulty: 'A',
         });
         rootId = treeId;
+        setResume({ rootId, done });
         await onMoveCard(infer.seedId, rootId);
       }
+      const tag = infer.mode === 'seed' ? infer.seedTag || '学习' : infer.rootTag || '学习';
       for (const s of suggestions) {
         if (!s.title.trim()) continue;
+        if (done > 0) {
+          done -= 1; // 跳过上次已建成的行
+          continue;
+        }
         await onAdd({
           title: s.title.trim(),
-          tag: infer.mode === 'seed' ? infer.seedTag || '学习' : infer.rootTag || '学习',
+          tag,
           kind: 'card',
           parentId: rootId,
           difficulty: s.difficulty,
         });
+        setResume({ rootId, done: 0 });
       }
       setInfer(null);
+      setResume(null);
+      toast(infer.mode === 'seed' ? '技能树已生成 ✓' : '子卡已补充 ✓', 'success');
     } catch (err) {
-      toast('创建失败：' + (err && err.message ? err.message : '未知错误'), 'error');
+      toast('创建失败（已建部分保留，重试只补剩余）：' + (err && err.message ? err.message : '未知错误'), 'error');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -134,7 +154,11 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
       {infer && (
         <TreeInferPanel
           infer={infer}
-          onClose={() => setInfer(null)}
+          confirming={creating}
+          onClose={() => {
+            setInfer(null);
+            setResume(null);
+          }}
           onConfirm={handleInferConfirm}
         />
       )}

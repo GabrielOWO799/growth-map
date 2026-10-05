@@ -13,7 +13,7 @@ const DIFFICULTY_OPTIONS = [
 
 const EMPTY_SUGGESTION = { title: '', difficulty: 'B', reason: '' };
 
-function TreeInferPanel({ infer, onClose, onConfirm }) {
+function TreeInferPanel({ infer, confirming = false, onClose, onConfirm }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [milestoneTitle, setMilestoneTitle] = useState('');
@@ -129,20 +129,20 @@ function TreeInferPanel({ infer, onClose, onConfirm }) {
           </div>
 
           <button
-            className="tree-btn add-row-btn"
+            className="btn btn-ghost btn-sm add-row-btn"
             onClick={() => setSuggestions((prev) => [...prev, { ...EMPTY_SUGGESTION }])}
           >
             ＋ 自己加一条
           </button>
 
           <div className="infer-actions">
-            <button className="btn btn-ghost btn-sm" onClick={onClose}>取消</button>
+            <button className="btn btn-ghost btn-sm" onClick={onClose} disabled={confirming}>取消</button>
             <button
               className="btn btn-primary btn-sm"
-              disabled={!canConfirm}
+              disabled={!canConfirm || confirming}
               onClick={() => onConfirm({ milestoneTitle: milestoneTitle.trim(), suggestions })}
             >
-              ✓ 确认创建
+              {confirming ? '⏳ 创建中...' : '✓ 确认创建'}
             </button>
           </div>
         </>
