@@ -1,5 +1,6 @@
 // src/components/ImportExportPanel.jsx
 import { useState } from 'react';
+import { toast } from '../toast';
 
 function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, achievementsCount }) {
   const [importData, setImportData] = useState('');
@@ -21,10 +22,10 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, ach
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      alert('导出成功！文件已开始下载');
+      toast('导出成功，文件已开始下载 ✓', 'success');
     } catch (error) {
       console.error('导出失败:', error);
-      alert('导出失败，请检查控制台');
+      toast('导出失败，请检查控制台', 'error');
     }
   };
 
@@ -40,7 +41,7 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, ach
       
       await onImport(importData);
       setImportData('');
-      alert('导入成功！');
+      toast('导入成功 ✓', 'success');
       onClose();
     } catch (error) {
       setImportError(`导入失败: ${error.message}`);
@@ -67,7 +68,7 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, ach
     if (window.confirm(`确定要清空所有 ${achievementsCount} 个成就吗？此操作不可恢复！`)) {
       onClear();
       onClose();
-      alert('已清空所有成就');
+      toast('已清空所有成就', 'success');
     }
   };
 
@@ -87,7 +88,7 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, ach
           </p>
           <button 
             onClick={handleExport}
-            className="action-button primary"
+            className="btn btn-primary btn-sm"
             disabled={achievementsCount === 0}
           >
             💾 导出JSON文件
@@ -141,7 +142,7 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, ach
 
           <button 
             onClick={handleImport}
-            className="action-button secondary"
+            className="btn btn-ghost btn-sm"
             disabled={!importData.trim() || isImporting}
           >
             {isImporting ? '⏳ 导入中...' : '📥 导入数据'}
@@ -158,7 +159,7 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, ach
           <div className="management-actions">
             <button 
               onClick={handleClear}
-              className="action-button danger"
+              className="btn btn-danger btn-sm"
               disabled={achievementsCount === 0}
             >
               🗑️ 清空所有成就 ({achievementsCount})
@@ -168,7 +169,7 @@ function ImportExportPanel({ onClose, onExport, onImport, onClear, onLogout, ach
               onClick={() => {
                 if (window.confirm('确定要退出登录吗？')) onLogout?.();
               }}
-              className="action-button warning"
+              className="btn btn-danger btn-sm"
             >
               🚪 退出登录
             </button>

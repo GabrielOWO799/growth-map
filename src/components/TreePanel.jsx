@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { TAGS, getTagColor, getTagEmoji } from '../constants/tags';
 import TreeInferPanel from './TreeInferPanel';
+import { toast } from '../toast';
 import { IS_DEMO_MODE } from '../config';
 import './TreePanel.css';
 
@@ -43,7 +44,7 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
       await onAdd({ title: newTreeTitle.trim(), tag: '学习', kind: 'milestone' });
       setNewTreeTitle('');
     } catch (err) {
-      alert('建树失败：' + (err && err.message ? err.message : '未知错误'));
+      toast('建树失败：' + (err && err.message ? err.message : '未知错误'), 'error');
     }
   };
 
@@ -60,7 +61,7 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
       });
       setDrafts((prev) => ({ ...prev, [rootId]: { ...EMPTY_DRAFT, tag: draft.tag || '学习' } }));
     } catch (err) {
-      alert('挂卡失败：' + (err && err.message ? err.message : '未知错误'));
+      toast('挂卡失败：' + (err && err.message ? err.message : '未知错误'), 'error');
     }
   };
 
@@ -68,7 +69,7 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
     try {
       await onDelete(node.id);
     } catch (err) {
-      alert('删除失败：' + (err && err.message ? err.message : '未知错误'));
+      toast('删除失败：' + (err && err.message ? err.message : '未知错误'), 'error');
     }
   };
 
@@ -76,7 +77,7 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
     try {
       await onLightUp(child.id, child.targetValue);
     } catch (err) {
-      alert('点亮失败：' + (err && err.message ? err.message : '未知错误'));
+      toast('点亮失败：' + (err && err.message ? err.message : '未知错误'), 'error');
     }
   };
 
@@ -105,7 +106,7 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
       }
       setInfer(null);
     } catch (err) {
-      alert('创建失败：' + (err && err.message ? err.message : '未知错误'));
+      toast('创建失败：' + (err && err.message ? err.message : '未知错误'), 'error');
     }
   };
 
@@ -125,7 +126,7 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
           placeholder="新树名称，如：Python 学习"
           disabled={isLoading}
         />
-        <button type="submit" className="tree-btn primary" disabled={isLoading || !newTreeTitle.trim()}>
+        <button type="submit" className="btn btn-primary btn-sm" disabled={isLoading || !newTreeTitle.trim()}>
           🌱 新建树
         </button>
       </form>
@@ -249,7 +250,7 @@ function TreePanel({ achievements, onAdd, onDelete, onLightUp, onMoveCard, isLoa
                     <option key={t.id} value={t.name}>{t.name}</option>
                   ))}
                 </select>
-                <button className="tree-btn" onClick={() => handleAddChild(root.id)} disabled={isLoading}>
+                <button className="btn btn-ghost btn-sm" onClick={() => handleAddChild(root.id)} disabled={isLoading}>
                   ＋ 挂卡
                 </button>
               </div>

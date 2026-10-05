@@ -5,6 +5,7 @@ import StatisticsPanel from './components/StatisticsPanel';
 import ImportExportPanel from './components/ImportExportPanel';
 import TreePanel from './components/TreePanel';
 import AuthForm from './components/AuthForm';
+import ToastHost from './components/ToastHost';
 import { TAGS } from './constants/tags';
 import useAchievements from './hooks/useAchievements';
 import { useAuth } from './auth/AuthContext';
@@ -81,6 +82,7 @@ function App() {
 
   return (
     <div className="app-container">
+      <ToastHost />
       <header className="app-header">
         <div className="header-content">
           <div>
@@ -90,19 +92,19 @@ function App() {
           <div className="header-actions">
             <button
               onClick={() => setView(view === 'wall' ? 'tree' : 'wall')}
-              className="header-button"
+              className="btn btn-ghost btn-sm"
             >
               {view === 'wall' ? '🌲 技能树' : '🏆 成就墙'}
             </button>
             <button
               onClick={() => setShowStatistics(!showStatistics)}
-              className="header-button"
+              className="btn btn-ghost btn-sm"
             >
               📊 {showStatistics ? '隐藏统计' : '显示统计'}
             </button>
             <button
               onClick={() => setShowImportExport(!showImportExport)}
-              className="header-button"
+              className="btn btn-ghost btn-sm"
             >
               🔄 {showImportExport ? '隐藏数据工具' : '数据工具'}
             </button>
@@ -128,9 +130,9 @@ function App() {
               </div>
             </>
           )}
-          <button onClick={reload} className="refresh-button" title="重新加载数据">🔄</button>
+          <button onClick={reload} className="icon-btn" title="重新加载数据">🔄</button>
           {!IS_DEMO_MODE && (
-            <button onClick={logout} className="refresh-button" title="退出登录">🚪</button>
+            <button onClick={logout} className="icon-btn" title="退出登录">🚪</button>
           )}
         </div>
 
@@ -179,13 +181,13 @@ function App() {
               <div className="control-panel">
                 <h3>⚙️ 控制面板</h3>
                 <div className="control-buttons">
-                  <button onClick={addExampleAchievement} className="control-button secondary" disabled={isLoading}>
+                  <button onClick={addExampleAchievement} className="btn btn-ghost btn-sm" disabled={isLoading}>
                     + 添加示例数据
                   </button>
-                  <button onClick={() => setShowStatistics(true)} className="control-button secondary">
+                  <button onClick={() => setShowStatistics(true)} className="btn btn-ghost btn-sm">
                     📊 查看统计
                   </button>
-                  <button onClick={() => setShowImportExport(true)} className="control-button secondary">
+                  <button onClick={() => setShowImportExport(true)} className="btn btn-ghost btn-sm">
                     🔄 数据管理
                   </button>
                 </div>

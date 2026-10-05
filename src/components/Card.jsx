@@ -1,12 +1,13 @@
 // src/components/Card.jsx
+// 收藏卡：难度=边框等级（A金/B银/C铜），完成卡金边+角标，进度条可视化
 import { getTagColor, getTagEmoji, TAGS } from '../constants/tags';
-import {useState,memo}from 'react';
+import { useState, memo } from 'react';
+import { toast } from '../toast';
 import LazyImage from './LazyImage';
 
+const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
+  const { id, title, description, imageUrl, tag, date, createdAt, currentValue, targetValue, difficulty } = achievement;
 
-const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
-  const { id, title, description, imageUrl, tag, date, createdAt, currentValue, targetValue } = achievement;
-  
   const [showDetails, setShowDetails] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -19,6 +20,16 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
   const tagColor = getTagColor(tag);
   const tagEmoji = getTagEmoji(tag);
 
+  // 完成态：进度达到目标（里程碑集齐的派生规则与技能树一致）
+  const isDone =
+    typeof currentValue === 'number' &&
+    typeof targetValue === 'number' &&
+    currentValue >= targetValue;
+  const progressPct =
+    isDone || (typeof targetValue === 'number' && targetValue > 0)
+      ? Math.min(100, Math.round(((currentValue || 0) / targetValue) * 100))
+      : 0;
+
   const handleSave = async () => {
     // 一次请求带上标题/描述/标签/进度：updateAchievement 走局部更新，不会重置其他字段
     if (onUpdate) {
@@ -26,7 +37,7 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
         await onUpdate(id, editData);
       } catch (e) {
         // 后端校验不通过（如进度超目标）或网络错误：留在编辑态提示，避免改动被静默丢弃
-        alert('保存失败：' + (e && e.message ? e.message : '未知错误'));
+        toast('保存失败：' + (e && e.message ? e.message : '未知错误'), 'error');
         return;
       }
     }
@@ -40,8 +51,8 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
 
   // 格式化日期
   const formatDate = (dateString) => {
-    const date = new Date(dateString || dateString);
-    return date.toLocaleDateString('zh-CN', {
+    const d = new Date(dateString);
+    return d.toLocaleDateString('zh-CN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -49,26 +60,28 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
   };
 
   const formattedDate = formatDate(createdAt || date);
-  
-
 
   return (
-    <div 
-      className={`achievement-card ${isEditing ? 'editing' : ''}`}
+    <div
+      className={`achievement-card ${isEditing ? 'editing' : ''} ${difficulty ? `tier-${difficulty}` : ''} ${isDone ? 'complete' : ''}`}
       onClick={() => !isEditing && setShowDetails(!showDetails)}
     >
+      {/* 等级徽章与完成角标（卡框上缘） */}
+      {difficulty && <span className="diff-badge">{difficulty}</span>}
+      {isDone && <span className="done-flag">✓ 已完成</span>}
+
       {/* 顶部：标签和操作按钮 */}
       <div className="card-header">
-        <div 
+        <div
           className="tag-badge"
           style={{ backgroundColor: `${tagColor}20`, color: tagColor }}
         >
           <span className="tag-emoji">{tagEmoji}</span>
           <span className="tag-name">{tag}</span>
         </div>
-        
+
         <div className="card-actions">
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               setIsEditing(!isEditing);
@@ -78,8 +91,8 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
           >
             ✏️
           </button>
-          
-          <button 
+
+          <button
             onClick={(e) => {
               e.stopPropagation();
               if (onDelete) onDelete(id);
@@ -91,7 +104,7 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
           </button>
         </div>
       </div>
-      
+
       {/* 图片 */}
       {imageUrl && (
         <div className="card-image">
@@ -102,7 +115,7 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
           />
         </div>
       )}
-      
+
       {/* 内容区域 */}
       <div className="card-content">
         {isEditing ? (
@@ -115,7 +128,7 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
               className="edit-input"
               placeholder="成就标题"
             />
-            
+
             <textarea
               value={editData.description}
               onChange={(e) => setEditData({ ...editData, description: e.target.value })}
@@ -139,7 +152,7 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
               className="edit-input"
               placeholder={`当前进度（0 - ${targetValue}）`}
             />
-            
+
             <div className="edit-tags">
               {TAGS.map((tagOption) => (
                 <button
@@ -147,15 +160,16 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
                   onClick={() => setEditData({ ...editData, tag: tagOption.name })}
                   className={`tag-option ${editData.tag === tagOption.name ? 'selected' : ''}`}
                   style={{
-                    backgroundColor: editData.tag === tagOption.name ? `${getTagColor(tagOption.name)}20` : '#f0f0f0',
-                    color: editData.tag === tagOption.name ? getTagColor(tagOption.name) : '#666'
+                    borderColor: editData.tag === tagOption.name ? getTagColor(tagOption.name) : undefined,
+                    backgroundColor: editData.tag === tagOption.name ? `${getTagColor(tagOption.name)}18` : undefined,
+                    color: editData.tag === tagOption.name ? getTagColor(tagOption.name) : undefined
                   }}
                 >
                   {getTagEmoji(tagOption.name)} {tagOption.name}
                 </button>
               ))}
             </div>
-            
+
             <div className="edit-actions">
               <button onClick={handleSave} className="save-button">
                 💾 保存
@@ -169,7 +183,7 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
           // 查看模式
           <>
             <h3 className="card-title">{title}</h3>
-            
+
             <div className="card-meta">
               <span className="card-date" title="创建时间">
                 📅 {formattedDate}
@@ -179,18 +193,22 @@ const Card=memo(function Card({ achievement, onDelete, onUpdate }) {
               </span>
             </div>
 
-            {typeof currentValue === 'number' && (
+            {/* 进度条：current / target */}
+            {typeof currentValue === 'number' && typeof targetValue === 'number' && (
               <div className="card-progress" title="当前进度">
-                📈 进度 {currentValue}
+                <div className="progress-track">
+                  <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+                </div>
+                <span className="progress-num">{currentValue}/{targetValue}</span>
               </div>
             )}
-            
+
             {showDetails && description && (
               <div className="card-description">
                 <p>{description}</p>
               </div>
             )}
-            
+
             <div className="card-footer">
               <span className="view-hint">
                 {showDetails ? '👆 点击收起详情' : '👇 点击查看详情'}

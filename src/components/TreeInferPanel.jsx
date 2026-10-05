@@ -80,7 +80,7 @@ function TreeInferPanel({ infer, onClose, onConfirm }) {
       {error && !loading && (
         <div className="infer-error">
           <p>⚠️ {error}</p>
-          <button className="tree-btn" onClick={run}>重试</button>
+          <button className="btn btn-ghost btn-sm" onClick={run}>重试</button>
         </div>
       )}
 
@@ -136,9 +136,9 @@ function TreeInferPanel({ infer, onClose, onConfirm }) {
           </button>
 
           <div className="infer-actions">
-            <button className="tree-btn" onClick={onClose}>取消</button>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>取消</button>
             <button
-              className="tree-btn primary"
+              className="btn btn-primary btn-sm"
               disabled={!canConfirm}
               onClick={() => onConfirm({ milestoneTitle: milestoneTitle.trim(), suggestions })}
             >
