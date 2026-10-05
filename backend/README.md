@@ -47,6 +47,12 @@
 | 变量 | 必填 | 说明 |
 |---|---|---|
 | `SECRET_KEY` | 生产必填 | JWT 签名密钥。生成方式：`python -c "import secrets; print(secrets.token_hex(32))"`。未设置时：DEBUG 模式给临时密钥并警告，非 DEBUG 直接拒绝启动 |
+| `DATABASE_URL` | 生产必填 | Postgres 连接串（如 Neon 免费库）。`postgres://` 开头会自动归一化，驱动用 psycopg3 |
 | `DEEPSEEK_API_KEY` | 推演功能必填 | DeepSeek API 密钥（`sk-` 开头），用于技能树 AI 推演。未配置时推演接口返回 503，其余功能不受影响 |
-| `DATABASE_URL` | 建议 | 生产数据库连接串。Railway 的文件系统不持久，SQLite 会随重新部署丢数据，建议用平台提供的 Postgres |
 | `DEBUG` | 可选 | 本地开发设 `True`；生产保持未设置或 `false` |
+
+## 免费部署方案：Render + Neon（当前采用）
+
+- **后端**：Render 免费档（闲置 15 分钟休眠，下次访问约 30–60 秒唤醒）。仓库根目录的 `render.yaml` 是 Blueprint 配置——Render 控制台选 New → Blueprint → 选本仓库即自动按配置创建，`SECRET_KEY` 自动生成，`DATABASE_URL` 和 `DEEPSEEK_API_KEY` 在评审页手填
+- **数据库**：Neon 免费 Postgres（0.5GB，不过期）。所有免费托管平台的磁盘都是临时的，数据必须放外部数据库
+- 迁移链已做双方言兼容（SQLite / Postgres），`buildCommand` 里的 `alembic upgrade head` 会在每次部署时把库结构升到最新

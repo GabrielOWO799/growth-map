@@ -12,3 +12,6 @@ python-jose==3.5.0
 python-multipart==0.0.32
 httpx==0.28.1
 python-dotenv==1.2.2
+
+# Postgres 驱动（线上 Neon/Render 用；本地 SQLite 开发不需要，但统一安装保证环境一致）
+psycopg[binary]>=3.2

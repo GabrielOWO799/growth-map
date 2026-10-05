@@ -32,11 +32,11 @@ def upgrade() -> None:
     op.execute("UPDATE achievements SET kind = 'card' WHERE kind IS NULL")
 
     # 2) created_at: Date -> DateTime（前端排序、树内展示需要时间精度）。
-    #    SQLite 里两代都是文本存储，老值补 ' 00:00:00.000000' 后缀即无损转换。
+    #    CAST 写法同时兼容 SQLite（文本存储，补后缀无损转换）和 Postgres（date::varchar）
     with op.batch_alter_table("achievements") as batch:
         batch.add_column(sa.Column("created_at_new", sa.DateTime(), nullable=True))
     op.execute(
-        "UPDATE achievements SET created_at_new = created_at || ' 00:00:00.000000' "
+        "UPDATE achievements SET created_at_new = CAST(created_at AS VARCHAR) || ' 00:00:00.000000' "
         "WHERE created_at IS NOT NULL"
     )
     with op.batch_alter_table("achievements") as batch:
@@ -56,7 +56,7 @@ def downgrade() -> None:
         batch.drop_column("image_url")
     with op.batch_alter_table("achievements") as batch:
         batch.add_column(sa.Column("created_at_old", sa.Date(), nullable=True))
-    op.execute("UPDATE achievements SET created_at_old = substr(created_at, 1, 10)")
+    op.execute("UPDATE achievements SET created_at_old = substr(CAST(created_at AS VARCHAR), 1, 10)")
     with op.batch_alter_table("achievements") as batch:
         batch.drop_column("created_at")
         batch.alter_column(

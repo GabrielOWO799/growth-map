@@ -1,0 +1,20 @@
+# Render Blueprint：在 Render 控制台选 "New → Blueprint" 并选择本仓库，
+# 会按此文件自动创建后端服务（免手动配置）。
+services:
+  - type: web
+    name: growth-map-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    # 构建时装依赖 + 把数据库迁移跑到最新（Neon Postgres）
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.3
+      - key: SECRET_KEY
+        generateValue: true # 首次部署自动生成随机密钥并保存，无需手填
+      - key: DEEPSEEK_API_KEY
+        sync: false # AI 推演用；部署评审时手动粘贴（本地 backend/.env 里那个）
+      - key: DATABASE_URL
+        sync: false # Neon Postgres 连接串；部署评审时手动粘贴
