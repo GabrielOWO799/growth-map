@@ -5,12 +5,14 @@ import { toast } from '../toast';
 import './AddAchievementForm.css';
 
 function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
-  // 表单状态（理解：一个对象管理所有表单字段）
+  // 表单状态（一个对象管理所有表单字段；kind=card 成就卡 / task 任务卡）
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     imageUrl: '',
-    tag: '学习'
+    tag: '学习',
+    kind: 'card',
+    dueDate: ''
   });
 
   // 在组件顶层声明防抖状态
@@ -60,10 +62,14 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
       const newAchievement = {
         title: formData.title,
         description: formData.description,
-        imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop&auto=format',
         tag: formData.tag,
+        kind: formData.kind,
+        dueDate: formData.kind === 'task' && formData.dueDate ? formData.dueDate : null,
         date: new Date().toISOString().split('T')[0] // YYYY-MM-DD格式
       };
+      if (formData.kind === 'card') {
+        newAchievement.imageUrl = formData.imageUrl || 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop&auto=format';
+      }
 
       // 调用父组件传递的回调（已接通后端 API，真正发起请求）
       if (onAddAchievement) {
@@ -75,10 +81,12 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
         title: '',
         description: '',
         imageUrl: '',
-        tag: '学习'
+        tag: formData.tag,
+        kind: formData.kind,
+        dueDate: ''
       });
 
-      toast('成就已保存 ✓', 'success');
+      toast(formData.kind === 'task' ? '任务已创建 ✓' : '成就已保存 ✓', 'success');
     } catch (err) {
       // 捕获后端/网络错误，避免静默失败
       toast('保存失败：' + (err && err.message ? err.message : '未知错误'), 'error');
@@ -93,6 +101,26 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
   return (
     <div className="aaf-panel">
       <h2 className="aaf-title">🎯 添加新成就</h2>
+
+      {/* 类型切换：成就卡 / 任务卡 */}
+      <div className="aaf-kind-row">
+        <button
+          type="button"
+          className={`aaf-kind-btn ${formData.kind === 'card' ? 'selected' : ''}`}
+          onClick={() => setFormData({ ...formData, kind: 'card' })}
+          disabled={locked}
+        >
+          🎖️ 成就卡<span className="aaf-kind-sub">已完成的事</span>
+        </button>
+        <button
+          type="button"
+          className={`aaf-kind-btn ${formData.kind === 'task' ? 'selected' : ''}`}
+          onClick={() => setFormData({ ...formData, kind: 'task' })}
+          disabled={locked}
+        >
+          ⏰ 任务卡<span className="aaf-kind-sub">要做的事 · 可设截止</span>
+        </button>
+      </div>
 
       <form onSubmit={handleSubmit}>
         {/* 成就标题 */}
@@ -127,19 +155,36 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
           />
         </div>
 
-        {/* 图片URL */}
-        <div className="aaf-field">
-          <label className="aaf-label">图片URL（可选）</label>
-          <input
-            type="text"
-            name="imageUrl"
-            value={formData.imageUrl}
-            onChange={handleInputChange}
-            placeholder="输入图片链接，或留空使用默认图片"
-            className="aaf-input"
-            disabled={locked}
-          />
-        </div>
+        {/* 图片URL（任务卡没有卡面图） */}
+        {formData.kind === 'card' && (
+          <div className="aaf-field">
+            <label className="aaf-label">图片URL（可选）</label>
+            <input
+              type="text"
+              name="imageUrl"
+              value={formData.imageUrl}
+              onChange={handleInputChange}
+              placeholder="输入图片链接，或留空使用默认图片"
+              className="aaf-input"
+              disabled={locked}
+            />
+          </div>
+        )}
+
+        {/* 截止日期（仅任务卡） */}
+        {formData.kind === 'task' && (
+          <div className="aaf-field">
+            <label className="aaf-label">截止日期（可选）</label>
+            <input
+              type="date"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleInputChange}
+              className="aaf-input"
+              disabled={locked}
+            />
+          </div>
+        )}
 
         {/* 标签选择 */}
         <div className="aaf-field aaf-field-tags">
@@ -170,7 +215,13 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
           className="btn btn-primary aaf-submit"
           disabled={locked}
         >
-          {isUploading ? '⏳ 上传中...' : (disabled ? '⏳ 加载中...' : '💾 保存成就')}
+          {isUploading
+            ? '⏳ 上传中...'
+            : disabled
+              ? '⏳ 加载中...'
+              : formData.kind === 'task'
+                ? '⏰ 创建任务'
+                : '💾 保存成就'}
         </button>
       </form>
 

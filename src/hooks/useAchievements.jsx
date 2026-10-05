@@ -15,6 +15,7 @@ import * as api from '../api';
 import * as localBackend from '../localBackend';
 import { IS_DEMO_MODE } from '../config';
 import { useAuth } from '../auth/AuthContext';
+import { computeLedger } from '../ledger';
 
 // 数据层二选一：演示模式走 localStorage，否则走真实后端（两者函数签名一致）
 const backend = IS_DEMO_MODE ? localBackend : api;
@@ -157,22 +158,8 @@ function useAchievements() {
     return true;
   }, [achievements]);
 
-  // 统计（前端本地计算，inputs 仍是 tag/createdAt）
-  const getStatistics = useCallback(() => {
-    const total = achievements.length;
-    const byTag = {};
-    achievements.forEach((a) => {
-      byTag[a.tag] = (byTag[a.tag] || 0) + 1;
-    });
-    const last7Days = {};
-    const now = new Date();
-    achievements.forEach((a) => {
-      const date = new Date(a.createdAt || a.date);
-      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-      if (diffDays <= 7) last7Days[diffDays] = (last7Days[diffDays] || 0) + 1;
-    });
-    return { total, byTag, last7Days };
-  }, [achievements]);
+  // 统计/账本：全部由 computeLedger 纯函数从当前列表推导（streak、图鉴、XP、隐藏成就等）
+  const getStatistics = useCallback(() => computeLedger(achievements), [achievements]);
 
   // 导出当前列表为 JSON
   const exportData = useCallback(

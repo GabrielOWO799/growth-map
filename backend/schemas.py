@@ -82,7 +82,7 @@ class UserOut(BaseModel):
     username: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True  # Pydantic v2 写法（orm_mode 是 v1 名字，会出警告）
 
 class Token(BaseModel):
     access_token: str

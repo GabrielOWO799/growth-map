@@ -6,7 +6,7 @@
 import { IS_DEMO_MODE } from './config';
 
 const STORE_KEY = 'gm_demo_data';
-const SEED_FLAG = 'gm_demo_seeded_v1';
+const SEED_FLAG = 'gm_demo_seeded_v2';
 
 // ---- 种子数据：首次进入演示时铺一条"成长路径"，展示界面用的示例 ----
 function seedData() {
@@ -42,6 +42,13 @@ function seedData() {
       id: 6, kind: 'card', title: '晨跑 5 公里', description: '坚持第三周',
       category: '健身', target_value: 1, current_value: 0, parent_id: null, root_id: null,
       image_url: null, difficulty: 'C', due_date: null, created_at: daysAgo(0),
+    },
+    {
+      id: 7, kind: 'task', title: '整理本周学习笔记', description: '',
+      category: '学习', target_value: 1, current_value: 0, parent_id: null, root_id: null,
+      image_url: null, difficulty: null,
+      due_date: new Date(now + 2 * 24 * 3600 * 1000).toISOString().split('T')[0],
+      created_at: daysAgo(0),
     },
   ];
 }

@@ -6,7 +6,7 @@ import { toast } from '../toast';
 import LazyImage from './LazyImage';
 
 const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
-  const { id, title, description, imageUrl, tag, date, createdAt, currentValue, targetValue, difficulty } = achievement;
+  const { id, title, description, imageUrl, tag, date, createdAt, currentValue, targetValue, difficulty, kind, dueDate } = achievement;
 
   const [showDetails, setShowDetails] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -61,9 +61,31 @@ const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
 
   const formattedDate = formatDate(createdAt || date);
 
+  // 任务卡的截止徽章：温柔提醒，不惩罚——只陈述"还剩/已过期多少天"
+  const dueInfo = (() => {
+    if (kind !== 'task' || !dueDate) return null;
+    const due = new Date(`${dueDate}T23:59:59`);
+    if (Number.isNaN(due.getTime())) return null;
+    const days = Math.ceil((due - new Date()) / 86400000);
+    const dateText = `${due.getMonth() + 1}月${due.getDate()}日`;
+    let text;
+    if (days < 0) text = `已过期 ${-days} 天`;
+    else if (days === 0) text = '今天截止';
+    else text = `还剩 ${days} 天`;
+    return { text, dateText, cls: days < 0 ? 'overdue' : days <= 2 ? 'soon' : '' };
+  })();
+
+  const handleCompleteTask = async () => {
+    try {
+      await onUpdate(id, { currentValue: targetValue || 1 });
+    } catch (e) {
+      toast('完成失败：' + (e && e.message ? e.message : '未知错误'), 'error');
+    }
+  };
+
   return (
     <div
-      className={`achievement-card ${isEditing ? 'editing' : ''} ${difficulty ? `tier-${difficulty}` : ''} ${isDone ? 'complete' : ''}`}
+      className={`achievement-card ${isEditing ? 'editing' : ''} ${kind === 'task' ? 'task' : ''} ${difficulty ? `tier-${difficulty}` : ''} ${isDone ? 'complete' : ''}`}
       onClick={() => !isEditing && setShowDetails(!showDetails)}
     >
       {/* 等级徽章与完成角标（卡框上缘） */}
@@ -203,6 +225,13 @@ const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
               </div>
             )}
 
+            {/* 任务卡的截止提醒 */}
+            {dueInfo && (
+              <span className={`due-badge ${dueInfo.cls}`} title={`截止日期：${dueInfo.dateText}`}>
+                ⏰ {dueInfo.text}
+              </span>
+            )}
+
             {showDetails && description && (
               <div className="card-description">
                 <p>{description}</p>
@@ -210,6 +239,17 @@ const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
             )}
 
             <div className="card-footer">
+              {kind === 'task' && !isDone && (
+                <button
+                  className="task-done-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCompleteTask();
+                  }}
+                >
+                  ✓ 完成
+                </button>
+              )}
               <span className="view-hint">
                 {showDetails ? '👆 点击收起详情' : '👇 点击查看详情'}
               </span>

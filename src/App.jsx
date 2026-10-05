@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Card from './components/Card';
 import AddAchievementForm from './components/AddAchievementForm';
 import StatisticsPanel from './components/StatisticsPanel';
@@ -41,6 +41,19 @@ function App() {
   const [showImportExport, setShowImportExport] = useState(false);
   // 主视图切换：'wall' 成就墙（日常记录）| 'tree' 技能树（森林）
   const [view, setView] = useState('wall');
+
+  // 佩戴中的称号（localStorage 按用户隔离；称号本身由 ledger 从数据派生，这里只存"戴了哪个"）
+  const titleKey = `gm_title_${username || 'anon'}`;
+  const [wornTitle, setWornTitleState] = useState(() => localStorage.getItem(titleKey));
+  useEffect(() => {
+    setWornTitleState(localStorage.getItem(titleKey));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username]);
+  const setWornTitle = (name) => {
+    if (name) localStorage.setItem(titleKey, name);
+    else localStorage.removeItem(titleKey);
+    setWornTitleState(name);
+  };
 
   // 未登录：只渲染认证页
   if (!isAuthenticated) {
@@ -122,7 +135,10 @@ function App() {
             <>
               <div className="storage-item">
                 <span className="storage-label">👤 账号:</span>
-                <span className="storage-value">{username}</span>
+                <span className="storage-value">
+                  {username}
+                  {wornTitle && <span className="worn-title">「{wornTitle}」</span>}
+                </span>
               </div>
               <div className="storage-item">
                 <span className="storage-label">🔄 状态:</span>
@@ -136,11 +152,12 @@ function App() {
           )}
         </div>
 
-        {/* 统计面板 */}
+        {/* 统计与账本面板 */}
         {showStatistics && (
           <StatisticsPanel
             statistics={statistics}
-            tags={TAGS}
+            wornTitle={wornTitle}
+            onWearTitle={setWornTitle}
             onClose={() => setShowStatistics(false)}
           />
         )}

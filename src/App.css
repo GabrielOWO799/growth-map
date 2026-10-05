@@ -923,3 +923,233 @@
     flex-direction: column;
   }
 }
+
+/* ============================================================
+   账本扩展：角色面板 / 图鉴 / 成就展廊 / 任务卡
+   ============================================================ */
+
+/* 角色面板 */
+.role-section {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+}
+
+.role-section h4,
+.codex-section h4,
+.recent-activity-section h4 {
+  margin: 0 0 10px;
+  font-size: 14.5px;
+}
+
+.role-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.level-badge {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--primary);
+  border: 1.5px solid var(--tier-gold);
+  border-radius: 999px;
+  padding: 2px 12px;
+  white-space: nowrap;
+  background: var(--surface);
+}
+
+.role-xp {
+  flex: 1;
+}
+
+.role-xp-num {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.role-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.attrs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.attr-item {
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 4px;
+}
+
+.attr-value {
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.attr-value small {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.attr-name {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* 图鉴区块 */
+.codex-section {
+  margin-top: 16px;
+}
+
+/* 成就展廊（称号） */
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.ach-item {
+  position: relative;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 10px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.ach-item.unlocked:hover {
+  border-color: var(--tier-gold);
+}
+
+.ach-item.locked {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.ach-item.worn {
+  border-color: var(--tier-gold);
+  box-shadow: inset 0 0 0 1px rgba(184, 145, 47, 0.25);
+}
+
+.ach-icon {
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+.ach-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.ach-item.locked .ach-name {
+  color: var(--muted);
+}
+
+.ach-desc {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+.ach-worn {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--tier-gold);
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* 任务卡 */
+.achievement-card.task {
+  border-style: dashed;
+}
+
+.due-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.due-badge.soon {
+  color: var(--primary);
+  border-color: var(--line-strong);
+}
+
+.due-badge.overdue {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: rgba(168, 69, 46, 0.06);
+}
+
+.task-done-btn {
+  border: 1px solid var(--green);
+  background: var(--surface);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.task-done-btn:hover {
+  background: rgba(93, 122, 74, 0.12);
+}
+
+/* 图片加载失败占位 */
+.image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  font-size: 26px;
+  background: var(--surface-2);
+}
+
+@media (max-width: 768px) {
+  .attrs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 头部佩戴中的称号 */
+.worn-title {
+  color: var(--tier-gold);
+  font-weight: 700;
+  margin-left: 4px;
+}
