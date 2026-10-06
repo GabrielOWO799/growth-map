@@ -11,6 +11,8 @@
 // 注意：没有用 axios（项目未安装），改用原生 fetch，零依赖、可避免 import 崩溃。
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// 相对图片地址（后端 /images/{id}）需要拼上后端域名才能在 <img> 里使用
+export const getBackendBase = () => BASE;
 const TOKEN_KEY = 'gm_token';
 
 // ---- token 存取（与 AuthContext 共用同一 key） ----
@@ -120,6 +122,11 @@ export async function fetchStatsByCategory() {
 
 export async function fetchOverallStats() {
   return request('GET', '/achievements/stats/overall');
+}
+
+// ---------- 图片资产（上传压缩后的 data URL，换回 /images/{id} 地址） ----------
+export async function uploadImage(dataUrl) {
+  return request('POST', '/images', { data: dataUrl });
 }
 
 // ---------- AI 推演（只拿建议，不落库；确认后走正常创建接口） ----------

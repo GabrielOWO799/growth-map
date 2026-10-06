@@ -19,6 +19,7 @@ import { computeLedger } from '../ledger';
 
 // 数据层二选一：演示模式走 localStorage，否则走真实后端（两者函数签名一致）
 const backend = IS_DEMO_MODE ? localBackend : api;
+const getBackendBase = () => (IS_DEMO_MODE ? '' : api.getBackendBase());
 
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop&auto=format';
@@ -34,7 +35,10 @@ function toFrontend(db) {
     kind: db.kind ?? 'card',
     parentId: db.parent_id ?? null,
     rootId: db.root_id ?? null,
-    imageUrl: db.image_url || DEFAULT_IMAGE,
+    // 后端存的相对地址 /images/{id} 需要拼上后端域名；data URL（演示模式）与外链原样使用
+    imageUrl: db.image_url
+      ? (db.image_url.startsWith('/') ? getBackendBase() + db.image_url : db.image_url)
+      : DEFAULT_IMAGE,
     date: db.created_at,
     createdAt: db.created_at,
     // 进度/目标模型（后端已有，前端在编辑弹窗里直接接 currentValue）
@@ -59,8 +63,9 @@ function toBackend(fe) {
     due_date: fe.dueDate ?? null,
     kind: fe.kind ?? 'card',
     parent_id: fe.parentId ?? null,
-    // 默认占位图不落库，保持 null，让展示层自己回落
-    image_url: fe.imageUrl && fe.imageUrl !== DEFAULT_IMAGE ? fe.imageUrl : null,
+    // 图片三种形态：外链 http(s)、站内相对 /images/{id}、默认占位 null。
+    // data URL 在 hook 层已先上传换取地址，这里兜底拒绝（避免大字符串塞进 image_url 列）
+    image_url: fe.imageUrl && !fe.imageUrl.startsWith('data:') && fe.imageUrl !== DEFAULT_IMAGE ? fe.imageUrl : null,
     difficulty: fe.difficulty ?? null,
   };
 }
@@ -118,17 +123,36 @@ function useAchievements() {
     }
   }, [isAuthenticated, loadData]);
 
-  // 新增
+  // 新增（含图片：本地上传的 data URL 先换取 /images/{id} 地址，再落库）
   const addAchievement = useCallback(async (fe) => {
-    const created = await backend.createAchievement(toBackend(fe));
+    let imageUrl = fe.imageUrl;
+    if (imageUrl && imageUrl.startsWith('data:')) {
+      const r = await backend.uploadImage(imageUrl);
+      imageUrl = r.url;
+    }
+    const created = await backend.createAchievement(toBackend({ ...fe, imageUrl }));
     const mapped = toFrontend(created);
     setAchievements((prev) => [mapped, ...prev]);
     return mapped.id;
   }, []);
 
   // 更新（局部：只传变化的字段，后端 exclude_unset=True 不会动其他字段）
+  // imageData 语义：undefined=未改动；data URL=更换图片；null=移除图片（回落默认图）
   const updateAchievement = useCallback(async (id, edits) => {
-    const updated = await backend.updateAchievement(id, toBackendPatch(edits));
+    let patch = edits;
+    if (edits.imageData !== undefined) {
+      if (edits.imageData === null) {
+        patch = { ...edits, imageUrl: null };
+      } else if (edits.imageData.startsWith('data:')) {
+        const r = await backend.uploadImage(edits.imageData);
+        patch = { ...edits, imageUrl: r.url };
+      } else {
+        patch = { ...edits, imageUrl: edits.imageData };
+      }
+      const { imageData: _consumed, ...rest } = patch;
+      patch = rest;
+    }
+    const updated = await backend.updateAchievement(id, toBackendPatch(patch));
     const mapped = toFrontend(updated);
     setAchievements((prev) => prev.map((a) => (a.id === id ? mapped : a)));
     return true;

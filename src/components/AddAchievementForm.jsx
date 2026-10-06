@@ -2,6 +2,7 @@
 // 添加成就表单（样式已抽离到 AddAchievementForm.css，逻辑与旧版完全一致）
 import { useState, useEffect } from 'react';
 import { toast } from '../toast';
+import { compressImage } from '../utils/image';
 import './AddAchievementForm.css';
 
 function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
@@ -155,19 +156,47 @@ function AddAchievementForm({ onAddAchievement, tags, disabled = false }) {
           />
         </div>
 
-        {/* 图片URL（任务卡没有卡面图） */}
+        {/* 卡面图片（本地选择，前端自动压缩） */}
         {formData.kind === 'card' && (
           <div className="aaf-field">
-            <label className="aaf-label">图片URL（可选）</label>
-            <input
-              type="text"
-              name="imageUrl"
-              value={formData.imageUrl}
-              onChange={handleInputChange}
-              placeholder="输入图片链接，或留空使用默认图片"
-              className="aaf-input"
-              disabled={locked}
-            />
+            <label className="aaf-label">卡面图片（可选，自动压缩）</label>
+            <div className="aaf-file-row">
+              {formData.imageUrl ? (
+                <img src={formData.imageUrl} alt="已选图片" className="aaf-file-thumb" />
+              ) : (
+                <div className="aaf-file-thumb aaf-file-empty">🖼️</div>
+              )}
+              <label className="aaf-file-btn">
+                📷 {formData.imageUrl ? '重新选择' : '选择本地图片'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="aaf-file-input"
+                  disabled={locked}
+                  onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    try {
+                      const dataUrl = await compressImage(file);
+                      setFormData((prev) => ({ ...prev, imageUrl: dataUrl }));
+                    } catch (err) {
+                      toast(err.message || '图片处理失败', 'error');
+                    }
+                    e.target.value = ''; // 允许重复选择同一文件
+                  }}
+                />
+              </label>
+              {formData.imageUrl && (
+                <button
+                  type="button"
+                  className="aaf-file-clear"
+                  disabled={locked}
+                  onClick={() => setFormData((prev) => ({ ...prev, imageUrl: '' }))}
+                >
+                  ✕ 清除
+                </button>
+              )}
+            </div>
           </div>
         )}
 

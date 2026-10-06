@@ -1153,3 +1153,69 @@
   font-weight: 700;
   margin-left: 4px;
 }
+
+/* 卡片编辑：图片区 */
+.edit-image {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  padding: 10px;
+}
+
+.edit-image-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.edit-image-removed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1.5px dashed var(--line-strong);
+  text-align: center;
+  padding: 4px;
+}
+
+.edit-image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-image-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  font-family: inherit;
+}
+
+.edit-image-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.edit-image-remove {
+  color: var(--danger);
+  border-color: var(--line);
+}
+
+.edit-image-remove:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}

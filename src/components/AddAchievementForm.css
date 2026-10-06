@@ -216,3 +216,57 @@
   font-weight: 400;
   color: var(--muted);
 }
+
+/* 本地图片选择 */
+.aaf-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aaf-file-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.aaf-file-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border: 1.5px dashed var(--line-strong);
+  font-size: 22px;
+}
+
+.aaf-file-btn {
+  padding: 9px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.aaf-file-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.aaf-file-input {
+  display: none;
+}
+
+.aaf-file-clear {
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px;
+}

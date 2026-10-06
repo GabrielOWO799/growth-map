@@ -1,9 +1,11 @@
 from datetime import timedelta
+import base64
 import os
+import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -48,6 +50,43 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {"message": "成长图谱后端已启动"}
+
+# ---------- 图片资产（上传压缩后的 data URL，随机 id，公开不可枚举读取） ----------
+@app.post("/images", tags=["图片"])
+def upload_image(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """接收前端压缩后的 data URL，落库并返回读取地址 /images/{id}"""
+    data = str(body.get("data") or "")
+    if not data.startswith("data:image/"):
+        raise HTTPException(status_code=422, detail="仅支持 data:image/ 开头的图片数据")
+    if len(data) > 1_500_000:  # 约 1.1MB 原始图片，前端压缩后通常远小于此
+        raise HTTPException(status_code=422, detail="图片过大，请压缩后重试")
+    image_id = uuid.uuid4().hex
+    db.add(models.Image(id=image_id, user_id=current_user.id, data=data))
+    db.commit()
+    return {"url": f"/images/{image_id}"}
+
+
+@app.get("/images/{image_id}", tags=["图片"])
+def get_image(image_id: str, db: Session = Depends(get_db)):
+    """公开读取（id 不可枚举）。内容不可变 → 允许浏览器永久缓存"""
+    row = db.query(models.Image).filter(models.Image.id == image_id).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="图片不存在")
+    try:
+        header, b64 = row.data.split(",", 1)
+        mime = header.split(":")[1].split(";")[0]
+        raw = base64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=500, detail="图片数据损坏")
+    return Response(
+        content=raw,
+        media_type=mime,
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 # ---------- 成就CRUD ----------
 @app.post("/achievements", 

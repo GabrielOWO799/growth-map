@@ -14,6 +14,19 @@ class User(Base):
     # 关联关系：一个用户拥有多个成就
     achievements = relationship("Achievement", back_populates="owner")
 
+
+# 图片资产表：与业务数据分离。随机 uuid 作主键（不可枚举），
+# 读取端点公开（<img> 标签无法携带认证头），内容不可变 → 前端可永久缓存。
+class Image(Base):
+    __tablename__ = "images"
+
+    id = Column(String(32), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    data = Column(Text, nullable=False)  # 完整 data URL（data:image/...;base64,...）
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User")
+
 class Achievement(Base):
     __tablename__ = "achievements"
 

@@ -3,6 +3,7 @@
 import { getTagColor, getTagEmoji, TAGS } from '../constants/tags';
 import { useState, memo } from 'react';
 import { toast } from '../toast';
+import { compressImage } from '../utils/image';
 import LazyImage from './LazyImage';
 
 const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
@@ -14,7 +15,9 @@ const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
     title,
     description,
     tag,
-    currentValue: currentValue || 0
+    currentValue: currentValue || 0,
+    // 图片编辑语义：undefined=未改动；data URL=更换；null=移除（回落默认图）
+    imageData: undefined
   });
 
   const tagColor = getTagColor(tag);
@@ -45,8 +48,24 @@ const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
   };
 
   const handleCancel = () => {
-    setEditData({ title, description, tag, currentValue: currentValue || 0 });
+    setEditData({ title, description, tag, currentValue: currentValue || 0, imageData: undefined });
     setIsEditing(false);
+  };
+
+  // 编辑态的卡面预览：新选的 data URL > 移除(空) > 原图
+  const editImagePreview =
+    editData.imageData === null ? null : (editData.imageData || imageUrl);
+
+  const handleEditImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressImage(file);
+      setEditData((prev) => ({ ...prev, imageData: dataUrl }));
+    } catch (err) {
+      toast(err.message || '图片处理失败', 'error');
+    }
+    e.target.value = ''; // 允许重复选择同一文件
   };
 
   // 格式化日期
@@ -143,6 +162,30 @@ const Card = memo(function Card({ achievement, onDelete, onUpdate }) {
         {isEditing ? (
           // 编辑模式
           <div className="edit-form">
+            {/* 卡面图片编辑：预览 + 更换 + 移除 */}
+            <div className="edit-image">
+              {editImagePreview ? (
+                <img src={editImagePreview} alt="卡面预览" className="edit-image-preview" />
+              ) : (
+                <div className="edit-image-preview edit-image-removed">🖼️ 将使用默认图</div>
+              )}
+              <div className="edit-image-actions">
+                <label className="edit-image-btn">
+                  📷 更换图片
+                  <input type="file" accept="image/*" hidden onChange={handleEditImage} />
+                </label>
+                {editImagePreview && (
+                  <button
+                    type="button"
+                    className="edit-image-btn edit-image-remove"
+                    onClick={() => setEditData((prev) => ({ ...prev, imageData: null }))}
+                  >
+                    ✕ 移除图片
+                  </button>
+                )}
+              </div>
+            </div>
+
             <input
               type="text"
               value={editData.title}

@@ -127,6 +127,11 @@ export async function deleteAchievement(id) {
   return { message: '删除成功' };
 }
 
+// 演示模式没有服务端可存图片，data URL 直存进 image_url 字段（与真实后端返回 url 的用法对齐）
+export async function uploadImage(dataUrl) {
+  return { url: dataUrl };
+}
+
 // 供演示横幅做"重置演示数据"用（可选入口以后再接）
 export function resetDemoData() {
   localStorage.removeItem(STORE_KEY);
